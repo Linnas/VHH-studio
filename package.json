@@ -1,0 +1,12 @@
+{
+  "name": "loopline-vhh-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Timeline-based VHH design studio — epitope in, nanobody out.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "test": "node --test tests/engine.test.mjs"
+  }
+}
