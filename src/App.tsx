@@ -7,12 +7,15 @@ import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
 import { LogsDrawer } from './components/LogsDrawer';
 import { Toasts } from './components/Toasts';
+import { BackendDrawer } from './components/BackendDrawer';
+import { api } from './lib/backend';
 
 export function App() {
   const appRef = useRef<any>(null);
   if (!appRef.current) appRef.current = new LooplineApp();
   const app = appRef.current;
   const [dragModel, setDragModel] = useState<string | null>(null);
+  const [runsOpen, setRunsOpen] = useState(false);
 
   useEffect(() => {
     const isTyping = () => {
@@ -81,15 +84,35 @@ export function App() {
   useEffect(() => {
     const onBeforeUnload = () => app.save();
     window.addEventListener('beforeunload', onBeforeUnload);
-    (window as any).__loopline = { app };
+    (window as any).__loopline = { app, openRuns: () => setRunsOpen(true) };
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
   }, [app]);
 
+  // Persist the project snapshot to the SQLite backend (debounced; local autosave stays primary).
+  useEffect(() => {
+    let timer: number | undefined;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        api(`/api/projects/${encodeURIComponent(app.project.id)}`, {
+          method: 'PUT',
+          body: { name: app.project.name, data: app.project },
+        }).catch((error) => console.warn('Backend project sync failed:', error.message));
+      }, 1200);
+    };
+    const unsub = app.on('project', schedule);
+    schedule();
+    return () => {
+      window.clearTimeout(timer);
+      unsub();
+    };
+  }, [app]);
+
   return (
     <div id="app" className="ll-root">
-      <Topbar app={app} />
+      <Topbar app={app} onOpenRuns={() => setRunsOpen(true)} />
       <main className="workspace">
         <Library app={app} onDragModel={setDragModel} />
         <Stage app={app} />
@@ -98,6 +121,7 @@ export function App() {
       <Timeline app={app} dragModel={dragModel} />
       <LogsDrawer app={app} />
       <Toasts app={app} />
+      <BackendDrawer app={app} open={runsOpen} onClose={() => setRunsOpen(false)} />
     </div>
   );
 }

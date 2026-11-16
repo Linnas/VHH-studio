@@ -32,7 +32,7 @@ function SaveState({ app }: { app: any }) {
   return <span className={`save-state ${state === 'error' ? 'dirty' : ''}`}>{state === 'error' ? 'save failed' : 'saved'}</span>;
 }
 
-export function Topbar({ app }: { app: any }) {
+export function Topbar({ app, onOpenRuns }: { app: any; onOpenRuns: () => void }) {
   useAppEvents(app, ['project', 'history']);
   const [name, setName] = useState(app.project.name);
   const [exportOpen, setExportOpen] = useState(false);
@@ -124,6 +124,15 @@ export function Topbar({ app }: { app: any }) {
           className="ll-astryx-icon"
         />
         <span className="divider-v" />
+        <Button
+          label="Runs"
+          variant="secondary"
+          size="sm"
+          icon={<Glyph name="database" size={14} />}
+          onClick={onOpenRuns}
+          className="ll-runs"
+          tooltip="Tamarind runs, RFD4 jobs and persisted designs"
+        />
         <div className="menu-wrap" ref={menuRef}>
           <Button
             label="Export"

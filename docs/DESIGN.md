@@ -139,7 +139,7 @@ interface Adapter {
 }
 ```
 
-Tamarind Bio：`POST /api/v1/jobs` 提交 RFdiffusion/ProteinMPNN/ESMFold，轮询 job 状态，下载 PDB/FASTA，映射为 Artifact。密钥放服务端，前端只持有短期 token。
+Tamarind Bio：`POST /api/submit-job` 提交 `rfd4-proteina`，`GET /api/jobs?jobName=…` 轮询状态，`POST /api/result` 取 presigned ZIP，解析 `results.csv` + PDB 映射为 Artifact。密钥只放服务端 `.env`，前端只访问本地 `/api`。
 
 ---
 
@@ -240,5 +240,68 @@ main.tsx
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
 - **验证**：10 个引擎测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
 
-**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz / Tamarind 接口尚未接入，但 artifact 契约与 adapter 扩展点已保留。
+**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，但结果仅在 Runs 抽屉中以序列/指标/PDB 呈现，尚未进入 Canvas 真实结构渲染。
+
+---
+
+## 9. 持久化后端 + Tamarind RFD4 单执行器（v0.3）
+
+### 9.1 边界
+
+- **保留现有 React/Astryx 前端**，新增右侧 **Runs** 抽屉，不改变时间线与模拟引擎。
+- 后端与前端同源部署：`server.mjs` 提供 `dist/` + `/api`，Tamarind key 只存在于服务端 `.env`。
+- 第一优先级只接 **`rfd4-proteina` / `nanobody-design`**；其他模型继续走模拟/后续 adapter。
+
+### 9.2 SQLite schema
+
+```
+projects(id, name, data JSON, created_at, updated_at)
+runs(id, provider, external_id UNIQUE, type, task, status,
+     settings JSON, score JSON, summary JSON, source, error,
+     created_at, updated_at, completed_at)
+designs(id, run_id, design_id, sequence, cdr_sequences JSON,
+        pdb TEXT, metrics JSON, rank, created_at)
+events(id, run_id, level, message, created_at)
+```
+
+- 项目快照由前端 debounce 自动 `PUT /api/projects/:id`。
+- run 先落地为 `In Queue`，轮询器每 15s 调 Tamarind `/jobs`；完成后拉 `/result` 的 presigned ZIP，解析 `results.csv` 和 PDB，事务写入 designs。
+- 服务重启后自动恢复对非终态 run 的轮询。
+
+### 9.3 RFD4 闭环
+
+```
+GET /api/tamarind/jobs
+  → pickLatestDesignJob (rfd4-proteina + Complete + Created desc)
+  → POST /api/tamarind/import-latest
+  → Tamarind POST /result (presigned zip)
+  → unzip: results.csv + designs/*.pdb
+  → SQLite run + designs
+  → Runs drawer: design table, CDR, metrics, PDB download
+
+POST /api/tamarind/validate   (no-cost preflight)
+POST /api/tamarind/submit
+  → validate-job
+  → submit-job (real GPU)
+  → persist as In Queue
+  → poll /jobs every 15s
+  → import results on Complete
+```
+
+### 9.4 真实测试用例
+
+账号内两个 `rfd4-proteina` job，最新为：
+
+```
+vhh-1aki-w62-w63-vobar-rfd4-20261112
+Created 2026-11-12 05:52:04 · 8 designs
+```
+
+导入结果：`rfd4_design_008`，118 aa，ipTM 82.0，pLDDT 90.82，refold backbone RMSD 1.68 Å；当前 API 结果里 0/8 通过作者的成功阈值。RFD4 提交 settings 已通过 `/validate-job` 的 `valid: true` 校验，未在验证阶段实际提交新 GPU job。
+
+### 9.5 安全
+
+- `.env` / `data/` / `dist/` 均 gitignore。
+- API 不返回 key；Tamarind 请求只在 Node 进程内发。
+- 服务默认绑定 `127.0.0.1`；提交按钮要求显式“real job”确认，避免误触 GPU 花费。
 

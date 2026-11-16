@@ -1,6 +1,6 @@
 {
   "name": "loopline-vhh-studio",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "React 19 + Astryx VHH design studio — timeline-based, epitope in, nanobody out.",
@@ -10,12 +10,13 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/engine.test.mjs"
+    "test": "node --test tests/engine.test.mjs tests/backend.test.mjs"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.7.16",
     "@astryxdesign/theme-neutral": "^0.7.16",
     "@stylexjs/stylex": "^0.19.2",
+    "fflate": "^0.8.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

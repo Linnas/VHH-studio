@@ -25,21 +25,85 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 - **Canvas 2D**：3D 结构、Flow Map、Sequence 三段监视器仍是命令式 Canvas 渲染，由 React 组件托管生命周期与指针交互。
 - **纯 JS engine**：编译器、运行时、几何、序列与导出器保持与 UI 无关，便于测试和接真实 GPU。
 
+## 持久化后端 · Tamarind RFD4
+
+前端保持不变，新增一个 Node 持久化后端：
+
+- **SQLite**：`data/loopline.db`（Node 内置 `node:sqlite`，WAL 模式），保存项目快照、Tamarind run、设计序列、指标、PDB 和事件日志。
+- **Tamarind Bio 单执行器**：`rfd4-proteina` / `nanobody-design`。
+- **API key 只在服务端**：从 `.env` 读取，不进入前端 bundle，也不通过 API 返回。
+- **RFD4 闭环**：`GET /api/tamarind/jobs` → `POST /api/tamarind/import-latest` → 下载 Tamarind 结果 ZIP → 解析 `results.csv` + 8 个 PDB → 写入 SQLite → 在 UI 的 **Runs** 抽屉中展示。
+- **提交闭环**：`POST /api/tamarind/validate` 先校验；`POST /api/tamarind/submit` 提交真实 GPU job，后台每 15s 轮询 `/jobs`，完成后自动导入结果。
+
+### 本地配置
+
+```bash
+cp .env.example .env
+# 编辑 .env：TAMARIND_API_KEY=...
+npm install
+npm start
+```
+
+`.env`、`data/`、`dist/`、`node_modules/` 都不提交。
+
+### API
+
+| Method | Path | 作用 |
+| --- | --- | --- |
+| GET | `/api/health` | SQLite / Tamarind 配置状态 |
+| GET | `/api/projects` / `/api/projects/:id` | 项目快照 |
+| PUT | `/api/projects/:id` | 前端 debounce 自动保存项目 |
+| GET | `/api/runs` / `/api/runs/:id` | 持久化 run 与设计 |
+| POST | `/api/runs/:id/sync` | 手动同步一个 Tamarind run |
+| GET | `/api/designs/:id/pdb` | 下载真实设计 PDB |
+| GET | `/api/tamarind/jobs` | 列出账号 job + 最近设计 job |
+| POST | `/api/tamarind/import-latest` | 导入最新完成的设计 job |
+| POST | `/api/tamarind/import` | 按 jobName 导入 |
+| POST | `/api/tamarind/validate` | 无成本校验 RFD4 settings |
+| POST | `/api/tamarind/submit` | 提交 RFD4 并开始轮询 |
+
+### 已核对的最新测试 job
+
+通过 API 在账号里查到两个 `rfd4-proteina` 结果，最新的是：
+
+```text
+vhh-1aki-w62-w63-vobar-rfd4-20261112
+Created: 2026-11-12 05:52:04
+Task:    nanobody-design
+Designs: 8
+```
+
+已成功导入 SQLite，最佳候选：
+
+```text
+rfd4_design_008   118 aa
+ipTM 82.0 · pLDDT 90.82 · refold RMSD 1.68 Å · passed 0/8
+```
+
+RFD4 提交设置（target chain A、hotspots 62,63、vobarilizumab、8 designs、thinking_high、60 steps、seed 20261112）已通过 Tamarind `/validate-job` 返回 `valid: true`。验证阶段没有实际提交新 GPU job；`/submit` 路径已接好，提交后会自动轮询并导入。
+
+
+
 ## 快速开始
 
-要求：Node.js ≥ 22。
+要求：Node.js ≥ 24（开发时使用 Node 26，`node:sqlite` 已内置）。
 
 ```bash
 cd vhh-studio
+cp .env.example .env      # 填入 TAMARIND_API_KEY
 npm install
 npm start
 # prestart 会先执行 vite build，然后由 server.mjs 提供 dist/
 # → http://127.0.0.1:4173
 ```
 
-开发模式（Vite HMR，端口 5173）：
+开发模式（Vite HMR，端口 5173；`/api` 会代理到 4173，需同时运行后端）：
 
 ```bash
+# terminal 1
+npm start
+
+# terminal 2
 npm run dev
 ```
 
@@ -48,7 +112,7 @@ npm run dev
 ```bash
 npm run build             # 生产构建到 dist/
 npm run typecheck         # tsc --noEmit
-npm test                  # 引擎 / 编译器 / 导出器 10 个测试
+npm test                  # 引擎 / 后端 / 导出器 14 个测试
 node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启动 4173
 ```
 
@@ -69,6 +133,10 @@ node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启�
 | 渲染中：RFdiffusion 片段激活，骨架逐步凝实 |
 | --- |
 | ![diffusion](shots/05-diffusion.png) |
+
+| Tamarind Runs · RFD4 job 导入与设计明细 |
+| --- |
+| ![backend](shots/06-backend.png) |
 
 > 建议使用 Chrome / Edge 120+；界面用到 `color-mix()`、`backdrop-filter`、`ResizeObserver`。
 
@@ -129,7 +197,15 @@ vhh-studio/
 ├─ index.html                 # Vite entry
 ├─ vite.config.ts
 ├─ tsconfig.json
-├─ server.mjs                 # 生产静态服务 + SPA fallback + /api/health
+├─ server.mjs                 # 静态前端 + /api 路由 + SQLite 初始化
+├─ backend/
+│  ├─ api.js                  # REST routes
+│  ├─ db.js                   # node:sqlite schema / repositories
+│  ├─ tamarind.js             # API client + result ZIP/CSV/PDB parsing
+│  ├─ runner.js               # RFD4 submit / poll / import
+│  └─ config.js               # .env / data dir
+├─ data/                      # SQLite runtime data（gitignored）
+├─ .env.example
 ├─ src/
 │  ├─ main.tsx                # React root + Astryx Theme
 │  ├─ App.tsx                 # shell / keyboard / layout
@@ -224,13 +300,13 @@ interface Adapter {
 
 ## MVP 边界
 
-**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、3 套模板、确定性模拟引擎、10 个引擎测试。
+**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、3 套模板、确定性模拟引擎、14 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环**。
 
-**未实现**：真实推理、真实 PDB/mmCIF 解析、多链/配体、湿实验验证、协作、服务端队列、真实能量计算。所有数值仅用于交互演示。
+**未实现**：RFD4 结果在 Canvas 监视器中的真实结构渲染（当前 Runs 抽屉展示序列、指标和 PDB 下载）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
 
 ## 路线图
 
-- **v0.2** Tamarind Bio adapter、mmCIF 解析、作业队列与取消
-- **v0.3** 并行轨道 / A-B 对照、Compound Clip、结果版本对比
-- **v0.4** 3D 表面刷选表位、CDR 锁定、湿实验反馈闭环
-- **v1.0** 团队资源库、provenance 审计、ELN/LIMS 导出
+- **v0.3** 持久化后端 + Tamarind RFD4 单执行器（已落地）
+- **v0.4** RFD4 PDB 进入 Canvas 监视器、结果版本对比、Compound Clip
+- **v0.5** 并行轨道 / A-B 对照、更多 Tamarind 模型、作业取消
+- **v1.0** 3D 表面刷选表位、CDR 锁定、湿实验反馈闭环、团队资源库
