@@ -68,8 +68,11 @@ kbd {
 
 #app {
   height: 100%;
+  min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 56px minmax(0, 1fr) 348px;
+  overflow: hidden;
 }
 
 /* ============================== TOPBAR ============================== */
@@ -195,6 +198,7 @@ kbd {
   gap: 10px;
   padding: 10px 12px 10px;
   min-height: 0;
+  min-width: 0;
 }
 .panel {
   background: linear-gradient(180deg, #0c1117 0%, #090d12 100%);
@@ -313,7 +317,7 @@ kbd {
 .library-foot p { margin: 0; font-size: 8.5px; line-height: 1.45; color: var(--dim); }
 
 /* ============================== STAGE ============================== */
-.stage { display: flex; flex-direction: column; min-height: 0; position: relative; }
+.stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; }
 .stage-bar {
   height: 43px; flex: 0 0 auto;
   display: flex; align-items: center; gap: 8px;
@@ -590,7 +594,7 @@ kbd {
 .timeline {
   padding: 0 12px 8px; border-top: 1px solid var(--line-soft);
   background: linear-gradient(180deg, #080b0f 0%, #06080b 100%);
-  display: flex; flex-direction: column; min-height: 0;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
   position: relative; z-index: 20;
 }
 .tl-toolbar { height: 48px; display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
@@ -639,7 +643,7 @@ kbd {
 .zoom-control input { width: 84px; accent-color: #6e7d8e; height: 14px; }
 
 .tl-main {
-  flex: 1; min-height: 0; display: flex;
+  flex: 1; min-height: 0; min-width: 0; display: flex;
   border: 1px solid var(--line-soft); border-radius: 9px; overflow: hidden;
   background: #070a0e;
 }

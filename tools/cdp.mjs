@@ -11,6 +11,8 @@ const PORT = 9333;
 const URL = 'http://127.0.0.1:4173/';
 const scenario = process.argv[2] || 'initial';
 const output = process.argv[3] || join(process.cwd(), `shot-${scenario}.png`);
+const width = Number(process.env.CDP_WIDTH || 1600);
+const height = Number(process.env.CDP_HEIGHT || 1000);
 const profile = join(tmpdir(), `loopline-cdp-${Date.now()}`);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -88,7 +90,7 @@ async function main() {
     '--remote-allow-origins=*',
     `--remote-debugging-port=${PORT}`,
     `--user-data-dir=${profile}`,
-    '--window-size=1600,1000',
+    `--window-size=${width},${height}`,
     'about:blank',
   ], { stdio: 'ignore' });
 
@@ -105,7 +107,7 @@ async function main() {
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride', {
-      width: 1600, height: 1000, deviceScaleFactor: 1, mobile: false,
+      width, height, deviceScaleFactor: 1, mobile: false,
     });
     await cdp.send('Page.navigate', { url: URL });
     await sleep(2200);
