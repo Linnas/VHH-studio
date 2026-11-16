@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PORT = 9333;
-const URL = 'http://127.0.0.1:4173/';
+const URL = process.env.CDP_URL || 'http://127.0.0.1:4173/';
 const scenario = process.argv[2] || 'initial';
 const output = process.argv[3] || join(process.cwd(), `shot-${scenario}.png`);
 const width = Number(process.env.CDP_WIDTH || 1600);
@@ -132,7 +132,7 @@ async function main() {
     } else if (scenario === 'sequence') {
       await cdp.evaluate(`(() => {
         const app = window.__loopline.app;
-        app.state.playhead = 12.5;
+        app.setPlayhead(12.5);
         app.engine.advance(12.5);
         app.refreshResults(true);
         app.setView('sequence');

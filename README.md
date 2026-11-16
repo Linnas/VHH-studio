@@ -8,7 +8,7 @@
 
 ## 这是什么
 
-Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎原型**。它在浏览器里提供一套非线性编辑器（NLE）式的工作流：
+Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎原型**。前端使用 **React 19 + Astryx** 重构，在浏览器里提供一套非线性编辑器（NLE）式的工作流：
 
 - **Resources**：RFdiffusion、PROTEINA、ProteinMPNN、AntiFold、ESMFold、Boltz-2、DockQ/ipSAE、NanoFilter……每个模型都是一张可拖拽的"素材卡"。
 - **Timeline**：6 条轨道 = 6 个设计阶段。片段的先后顺序自动编译成带类型的 DAG，无需手动连线。
@@ -18,24 +18,43 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 
 > ⚠️ **MVP 使用确定性模拟运行时。** 结构是程序化的 CA trace 示意图，指标是模拟值，全部全局标注 `SIMULATION`，导出的 PDB 也带 `SIMULATION OUTPUT` 与"不可用于实验"的 REMARK。真实模型接入点已经留好（见下文 Adapter）。
 
+## 技术栈
+
+- **React 19 + TypeScript + Vite 8**：前端组件化与构建。
+- **Astryx 0.7（Meta 开源设计系统，Beta）**：`@astryxdesign/core` + `@astryxdesign/theme-neutral`。按钮、图标按钮、Tabs、Slider、Switch、TextInput、Badge、Tooltip 都来自 Astryx；自定义 Loopline dark theme 通过 `defineTheme()` 把 Astryx token 对齐到时间线的酸橙 / 深色调色板。
+- **Canvas 2D**：3D 结构、Flow Map、Sequence 三段监视器仍是命令式 Canvas 渲染，由 React 组件托管生命周期与指针交互。
+- **纯 JS engine**：编译器、运行时、几何、序列与导出器保持与 UI 无关，便于测试和接真实 GPU。
+
 ## 快速开始
 
-要求：Node.js ≥ 18（零运行时依赖）。
+要求：Node.js ≥ 22。
 
 ```bash
 cd vhh-studio
+npm install
 npm start
+# prestart 会先执行 vite build，然后由 server.mjs 提供 dist/
 # → http://127.0.0.1:4173
+```
+
+开发模式（Vite HMR，端口 5173）：
+
+```bash
+npm run dev
 ```
 
 其他命令：
 
 ```bash
-npm test                  # 编译 / 运行时 / 导出器共 10 个测试
-node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启动 server
+npm run build             # 生产构建到 dist/
+npm run typecheck         # tsc --noEmit
+npm test                  # 引擎 / 编译器 / 导出器 10 个测试
+node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启动 4173
 ```
 
 首次打开会载入一个 8 片段的 EGFR-D3 demo 时间线。按 **Space** 播放，或点右上角 **Render**，约 10 秒后得到 4 个候选设计。
+
+> Astryx 目前是 Beta；本项目锁定 `@astryxdesign/core@0.7.16`。Astryx 的安装脚本可能被 npm 的 allowScripts 策略拦截，但预编译 CSS/JS 仍可正常构建与运行。
 
 ## 截图
 
@@ -107,27 +126,57 @@ target ──▶ epitope ──▶ backbone ──▶ sequence ──▶ complex
 
 ```
 vhh-studio/
-├─ index.html
+├─ index.html                 # Vite entry
+├─ vite.config.ts
+├─ tsconfig.json
+├─ server.mjs                 # 生产静态服务 + SPA fallback + /api/health
 ├─ src/
-│  ├─ styles.css
-│  ├─ main.js                  # shell：topbar / transport / shortcuts / logs
-│  ├─ state.js                 # 项目状态、播放头、撤销、持久化、导出
+│  ├─ main.tsx                # React root + Astryx Theme
+│  ├─ App.tsx                 # shell / keyboard / layout
+│  ├─ theme.ts                # defineTheme(neutral) → Loopline palette
+│  ├─ app.css                 # Astryx bridge + React region styles
+│  ├─ styles.css              # studio visual system (timeline / monitor / panels)
+│  ├─ state.js                # 项目状态、播放头、撤销、持久化、导出
+│  ├─ components/
+│  │  ├─ Topbar.tsx           # project, runtime, undo/redo, export, render
+│  │  ├─ Library.tsx          # Astryx search + model cards + templates
+│  │  ├─ Stage.tsx            # Astryx Tabs + legacy canvas mount
+│  │  ├─ Timeline.tsx         # React NLE: drag/trim/scrub/snap/drop
+│  │  ├─ Inspector.tsx        # Astryx fields, diagnostics, results
+│  │  ├─ LogsDrawer.tsx
+│  │  └─ Toasts.tsx
+│  ├─ lib/                    # app-event hook + Lucide icon map
 │  ├─ engine/
-│  │  ├─ models.js             # 11 个模型、6 条轨道、3 套模板
-│  │  ├─ compiler.js           # timeline → typed DAG + diagnostics
-│  │  ├─ runtime.js            # playhead 驱动的模拟运行时
-│  │  ├─ structure.js          # 程序化几何、序列设计、PDB/FASTA/CSV
-│  │  └─ rng.js                # 确定性 seed / timecode
+│  │  ├─ models.js            # 11 个模型、6 条轨道、3 套模板
+│  │  ├─ compiler.js          # timeline → typed DAG + diagnostics
+│  │  ├─ runtime.js           # playhead 驱动的模拟运行时
+│  │  ├─ structure.js         # 程序化几何、序列设计、PDB/FASTA/CSV
+│  │  └─ rng.js               # 确定性 seed / timecode
 │  └─ ui/
-│     ├─ timeline.js           # 拖拽、裁剪、scrub、缩放、snap、drop
-│     ├─ monitor.js            # Canvas：3D / Flow Map / Sequence
-│     ├─ inspector.js          # 参数、接线、诊断、结果
-│     ├─ library.js            # 模型与模板
+│     ├─ monitor.js           # imperative Canvas renderer (3D / Flow / Sequence)
 │     └─ dom.js
 ├─ tests/engine.test.mjs
-├─ tools/cdp.mjs               # headless Chrome 截图 / 交互 smoke test
-└─ docs/DESIGN.md              # 产品设计方案
+├─ tools/cdp.mjs              # headless Chrome 截图 / 交互 smoke test
+├─ dist/                      # vite build 输出（已 gitignore）
+└─ docs/DESIGN.md             # 产品设计方案
 ```
+
+## 前端架构
+
+```
+main.tsx
+  └─ <Theme theme={looplineTheme} mode="dark">  ← Astryx provider
+       └─ <App>                                 ← one LooplineApp store
+            ├─ <Topbar>        Astryx Button / IconButton
+            ├─ <Library>       Astryx TextInput / Button
+            ├─ <Stage>         Astryx TabList + <MonitorCanvas>
+            ├─ <Inspector>     Astryx TabList / TextInput / Slider / Switch / Badge
+            ├─ <Timeline>      Astryx IconButton / Slider / Switch + custom clip layer
+            ├─ <LogsDrawer>
+            └─ <Toasts>
+```
+
+`LooplineApp`（`src/state.js`）保留原有 store/命令 API；React 组件通过 `useAppEvents` 订阅其事件，不直接操作 DOM。唯一的 imperative 部分是 `src/ui/monitor.js` 的 Canvas 渲染循环，它由 `<Stage>` 在挂载时创建、卸载时 `destroy()`。
 
 ## 模型资源
 

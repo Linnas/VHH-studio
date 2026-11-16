@@ -1,0 +1,373 @@
+@import '@astryxdesign/core/reset.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+@import './styles.css';
+
+html,
+body,
+#root,
+[data-astryx-theme] {
+  height: 100%;
+}
+
+/* The Astryx theme wrapper is a plain div; make it a full-height surface. */
+[data-astryx-theme] {
+  min-height: 100vh;
+}
+
+#app {
+  height: 100vh;
+  min-height: 600px;
+}
+
+/* ---------------------------------- Astryx bridge ---------------------------------- */
+.ll-root {
+  height: 100%;
+}
+
+.ll-root .ll-astryx-button {
+  height: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1px;
+  border-radius: 6px;
+}
+
+.ll-root .ll-astryx-icon {
+  width: 29px;
+  height: 29px;
+  border-radius: 6px;
+}
+
+.ll-root .ll-astryx-tabs {
+  background: #080c11;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 3px;
+}
+
+.ll-root .ll-astryx-tabs [role='tab'] {
+  height: 25px;
+  font-size: 10px;
+}
+
+.ll-root .ll-field-astryx label {
+  font-size: 9.5px !important;
+  color: var(--muted) !important;
+}
+
+.ll-root .ll-field-astryx input {
+  font-size: 10px !important;
+}
+
+.ll-root .ll-param {
+  margin-bottom: 7px;
+}
+
+.ll-root .ll-param label,
+.ll-root .ll-param .astryx-field-label {
+  font-size: 9.5px !important;
+  font-weight: 550 !important;
+  color: var(--muted) !important;
+}
+
+.ll-root .ll-param input {
+  font-size: 10px !important;
+}
+
+.ll-root .ll-param .astryx-field {
+  gap: 1px !important;
+}
+
+.ll-root .ll-param .astryx-slider {
+  height: 18px;
+}
+
+.ll-root .ll-param .astryx-slider ~ span {
+  font-size: 9px !important;
+  color: var(--cyan) !important;
+  font-family: var(--mono);
+}
+
+.ll-root .ll-param .astryx-text-input {
+  min-height: 30px;
+  height: 30px;
+}
+
+.ll-root .ll-param .astryx-field > div > span {
+  font-size: 8px !important;
+  line-height: 1.4;
+}
+
+.ll-root .ll-native-field select {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  background: #090e14;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 10px;
+  color: var(--text);
+  outline: none;
+}
+
+.ll-root .ll-native-field select:focus {
+  border-color: #48592b;
+}
+
+/* Primary Astryx controls sit on top of the acid-lime accent. */
+.ll-root .astryx-button[data-variant='primary'] {
+  color: #0c1206 !important;
+}
+
+.ll-root .astryx-button[data-variant='primary'] svg {
+  color: #0c1206 !important;
+}
+
+.ll-root .astryx-icon-button[data-variant='primary'] {
+  color: #0c1206 !important;
+}
+
+.ll-root .astryx-icon-button[data-variant='primary'] svg {
+  color: #0c1206 !important;
+}
+
+/* ------------------------------- React regions ---------------------------------- */
+.ll-library-search {
+  margin: 0 12px 8px;
+}
+
+.ll-library-search [data-astryx-field] {
+  margin: 0;
+}
+
+.ll-root .ll-filter {
+  height: 21px;
+  min-height: 21px;
+  padding: 0 7px;
+  font-size: 9.5px;
+  font-weight: 550;
+  border-radius: 4px;
+}
+
+.ll-root .ll-filter.is-active {
+  color: var(--text);
+}
+
+.ll-empty-note {
+  padding: 20px 8px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--faint);
+}
+
+.ll-meta-sep {
+  color: #2b3746;
+}
+
+.ll-meta-warn {
+  color: #c9a86c;
+}
+
+.ll-root .ll-render {
+  height: 30px;
+  padding-inline: 10px;
+  box-shadow: 0 0 0 1px rgba(200, 255, 77, .15), 0 4px 18px rgba(200, 255, 77, .14);
+}
+
+.ll-root .ll-render[aria-busy='true'] {
+  background: #243018;
+  color: var(--accent) !important;
+  border: 1px solid #3c4d24;
+  box-shadow: none;
+}
+
+.ll-root .ll-render[aria-busy='true'] svg {
+  color: var(--accent) !important;
+}
+
+.ll-root .ll-export {
+  height: 30px;
+}
+
+.ll-error-badge {
+  margin-left: 4px;
+}
+
+/* Stage view tabs: keep the compact studio tab strip. */
+.ll-root .view-tabs {
+  padding: 3px;
+  background: #080c11;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+}
+
+.ll-root .view-tabs [role='tab'] {
+  height: 25px;
+  gap: 5px;
+  padding-inline: 8px;
+  font-size: 10px !important;
+}
+.ll-root .ll-inspector-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 0;
+  background: transparent;
+}
+.ll-root .ll-inspector-tabs [role='tab'] {
+  height: 42px;
+  margin-right: 4px;
+  font-size: 10.5px !important;
+  font-weight: 550;
+}
+
+/* Timeline controls. */
+.ll-root .ll-play-btn {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  margin: 0 3px;
+}
+
+.ll-root .ll-tool {
+  height: 24px;
+  min-height: 24px;
+  padding-inline: 6px;
+  font-size: 8.5px;
+  font-family: var(--mono);
+  letter-spacing: .3px;
+}
+
+.ll-root .ll-snap {
+  height: 24px;
+  min-height: 24px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+}
+
+.ll-root .ll-snap .astryx-switch-label {
+  font-family: var(--mono);
+  font-size: 8.5px !important;
+  letter-spacing: .3px;
+  color: var(--muted) !important;
+}
+
+.ll-zoom {
+  width: 132px;
+  height: 24px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  background: #0a0f15;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  position: relative;
+}
+
+.ll-zoom::after {
+  content: '';
+  position: absolute;
+  left: 27px;
+  right: 11px;
+  top: 50%;
+  height: 2px;
+  background: #3a4858;
+  border-radius: 99px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ll-zoom .astryx-slider {
+  position: relative;
+  z-index: 1;
+}
+
+.ll-zoom > svg {
+  flex: 0 0 auto;
+}
+
+.ll-zoom [data-astryx-slider] {
+  width: 100%;
+}
+
+.ll-zoom .astryx-slider {
+  width: 100%;
+  height: 20px;
+}
+
+.ll-zoom .astryx-slider-track {
+  height: 3px !important;
+  background: #3a4858 !important;
+  border-radius: 99px;
+}
+
+.ll-zoom .astryx-slider-control {
+  gap: 0;
+}
+
+.ll-drop-chip {
+  position: absolute;
+  top: 4px;
+  transform: translateX(8px);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #0c1219;
+  border: 1px solid #3c4a2a;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 7px;
+  pointer-events: none;
+  z-index: 40;
+  white-space: nowrap;
+}
+
+/* Inspector Astryx tabs replace the vanilla button chrome. */
+.ll-root .ll-inspector-tabs {
+  height: 43px;
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.ll-root .ll-inspector-tabs [role='tab'] {
+  height: 43px;
+  margin-right: 4px;
+  font-size: 10.5px;
+  font-weight: 550;
+}
+
+.ll-export-results {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.ll-export-results > * {
+  flex: 1;
+}
+
+.ll-root .ll-export-results .astryx-button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Astryx fields inside the dense inspector need tighter vertical rhythm. */
+.ll-root .ll-param [data-astryx-field] {
+  gap: 3px;
+}
+
+.ll-root .ll-param [data-astryx-field] [data-astryx-label] {
+  margin-bottom: 1px;
+}
+
+/* Keep the visual instrumentation tight while Astryx supplies behavior. */
+.ll-root .ll-slider-astryx {
+  --slider-label-width: 0;
+}
+

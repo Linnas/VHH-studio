@@ -198,9 +198,39 @@ Tamarind Bio：`POST /api/v1/jobs` 提交 RFdiffusion/ProteinMPNN/ESMFold，轮�
 
 ---
 
-## 8. MVP 落地状态（v0.1）
+## 8. MVP 落地状态（v0.2）
 
-本仓库已实现可交互的 MVP，零运行时依赖，`npm start` 即可打开：
+前端已从原生 DOM 重构为 **React 19 + Astryx 0.7（Meta 开源设计系统，Beta）**；引擎、数据模型和交互语义保持不变。
+
+### 8.1 前端分层
+
+```
+main.tsx
+  └─ <Theme theme={looplineTheme} mode="dark">      Astryx provider + 自定义 token
+       └─ <App>                                     LooplineApp store 的 React 外壳
+            ├─ Topbar        Astryx Button / IconButton
+            ├─ Library       Astryx TextInput / Button
+            ├─ Stage         Astryx TabList + Canvas 监视器
+            ├─ Inspector     Astryx TabList / TextInput / Slider / Switch / Badge
+            ├─ Timeline      IconButton / Slider / Switch + React clip layer
+            ├─ LogsDrawer
+            └─ Toasts
+```
+
+- `LooplineApp`（`src/state.js`）仍是唯一状态源；React 组件用 `useAppEvents` 订阅事件，不直接操作 DOM。
+- Astryx 组件负责可访问性与交互基线；`app.css` 把 token / 尺寸 / 颜色桥接到 Loopline 的深色仪器风格。
+- `src/ui/monitor.js` 保留为命令式 Canvas 渲染器（3D / Flow / Sequence），由 `<Stage>` 挂载并 `destroy()`；这是 Canvas 场景的正常边界，不是 UI 状态。
+- 时间线交互（拖拽、裁剪、scrub、snap、drop、自动滚动）在 `src/components/Timeline.tsx` 中用 pointer events 重写，并修复了“时间线放大后撑宽整页”的布局约束。
+
+### 8.2 技术栈
+
+- React 19.3 + TypeScript + Vite 8
+- `@astryxdesign/core@0.7.16` + `@astryxdesign/theme-neutral` + `@stylexjs/stylex`
+- 自定义主题：`defineTheme({extends: neutralTheme, tokens: …})`
+- 生产：`npm start` 先 `vite build`，由 `server.mjs` 提供 `dist/`；开发：`npm run dev`（Vite HMR）
+- 验证：`npm run typecheck`、`npm test`（10 个引擎测试）、`npm run build`、`tools/cdp.mjs` headless 截图
+
+### 8.3 功能清单
 
 - **时间线编辑器**：拖入、跨轨移动、右缘裁剪、吸附、缩放、scrub、删除、复制、撤销重做、同轨避让。
 - **编译器**：按开始时间自动接线，缺输入 / 上游未完成 / 同轨重叠 / 越界均有诊断。
@@ -208,20 +238,7 @@ Tamarind Bio：`POST /api/v1/jobs` 提交 RFdiffusion/ProteinMPNN/ESMFold，轮�
 - **监视器**：Canvas 2D 自绘的 3D 示意（抗原表面点云 + 表位 + β-sandwich VHH + CDR 环 + 接触线 + diffusion 粒子）、Flow Map（带自动接线边）、Sequence（残基着色 + CDR 注释 + 三张 dossier 卡）。
 - **资源**：11 个模型 / 工具、6 条轨道、3 套模板（EGFR-D3、PD-L1、HER2）。
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
-- **验证**：`npm test` 10 个测试覆盖编译、模板、确定性、阶段状态、指标范围、导出器与模型契约；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
+- **验证**：10 个引擎测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
 
 **明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz / Tamarind 接口尚未接入，但 artifact 契约与 adapter 扩展点已保留。
-
-### 代码地图
-
-```
-src/engine/models.js   模型目录、轨道、模板、项目工厂
-src/engine/compiler.js 时间线 → typed DAG + 诊断
-src/engine/runtime.js  播放头驱动运行时 + artifact 缓存
-src/engine/structure.js 程序化几何、设计序列、PDB/FASTA/CSV
-src/state.js           项目状态、历史、持久化、Render、导出
-src/ui/timeline.js     NLE 交互
-src/ui/monitor.js      3D / Flow / Sequence 三种 Canvas 视图
-src/ui/inspector.js    参数表单、接线、诊断、Results
-```
 

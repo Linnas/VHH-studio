@@ -663,8 +663,8 @@ kbd {
 .track-head:hover { background: #0c1219; }
 .track-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--c); flex: 0 0 auto; box-shadow: 0 0 7px color-mix(in srgb, var(--c) 45%, transparent); }
 .track-info { min-width: 0; flex: 1; }
-.track-name { font-family: var(--mono); font-size: 8px; font-weight: 600; letter-spacing: 1.1px; color: var(--muted); }
-.track-desc { font-size: 7.5px; color: var(--faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track-name { font-family: var(--mono); font-size: 8px; font-weight: 600; letter-spacing: 1.1px; color: var(--muted); display: block; }
+.track-desc { font-size: 7.5px; color: var(--faint); margin-top: 1px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .track-count {
   font-family: var(--mono); font-size: 7px; color: var(--faint);
   border: 1px solid #18212b; border-radius: 3px; padding: 0 3px; min-width: 12px; text-align: center;

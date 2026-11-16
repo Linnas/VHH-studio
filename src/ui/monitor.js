@@ -75,15 +75,23 @@ export class Monitor {
 
     this.bind();
     this.resize();
-    this.app.on('view', () => this.syncMode());
-    this.app.on('tick', () => this.syncHud());
-    this.app.on('playhead', () => this.syncHud());
-    this.app.on('candidate', () => this.syncHud(true));
-    this.app.on('project', () => this.syncHud(true));
-    this.app.on('results', () => this.syncHud(true));
+    this._unsubs = [];
+    this._unsubs.push(this.app.on('view', () => this.syncMode()));
+    this._unsubs.push(this.app.on('tick', () => this.syncHud()));
+    this._unsubs.push(this.app.on('playhead', () => this.syncHud()));
+    this._unsubs.push(this.app.on('candidate', () => this.syncHud(true)));
+    this._unsubs.push(this.app.on('project', () => this.syncHud(true)));
+    this._unsubs.push(this.app.on('results', () => this.syncHud(true)));
     this.syncMode();
     this.syncHud(true);
-    requestAnimationFrame((ts) => this.loop(ts));
+    this._raf = requestAnimationFrame((ts) => this.loop(ts));
+  }
+
+  destroy() {
+    this._destroyed = true;
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._ro?.disconnect();
+    for (const unsub of this._unsubs || []) unsub();
   }
 
   syncMode() {
@@ -99,6 +107,7 @@ export class Monitor {
   bind() {
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.wrap);
+    this._ro = ro;
 
     this.canvas.addEventListener('pointerdown', (e) => {
       if (this.app.state.view === '3d') {
@@ -177,6 +186,7 @@ export class Monitor {
   }
 
   loop(ts) {
+    if (this._destroyed) return;
     const dt = Math.min(0.05, (ts - this.lastTs) / 1000 || 0.016);
     this.lastTs = ts;
     if (this.app.state.spin && this.app.state.view === '3d' && !this.pointer) {
@@ -184,7 +194,7 @@ export class Monitor {
     }
     this.draw();
     this.syncHud();
-    requestAnimationFrame((next) => this.loop(next));
+    this._raf = requestAnimationFrame((next) => this.loop(next));
   }
 
   draw() {
