@@ -228,7 +228,7 @@ main.tsx
 - `@astryxdesign/core@0.7.16` + `@astryxdesign/theme-neutral` + `@stylexjs/stylex`
 - 自定义主题：`defineTheme({extends: neutralTheme, tokens: …})`
 - 生产：`npm start` 先 `vite build`，由 `server.mjs` 提供 `dist/`；开发：`npm run dev`（Vite HMR）
-- 验证：`npm run typecheck`、`npm test`（10 个引擎测试）、`npm run build`、`tools/cdp.mjs` headless 截图
+- 验证：`npm run typecheck`、`npm test`（15 个引擎 / 后端测试）、`npm run build`、`tools/cdp.mjs` headless 截图
 
 ### 8.3 功能清单
 
@@ -238,9 +238,9 @@ main.tsx
 - **监视器**：Canvas 2D 自绘的 3D 示意（抗原表面点云 + 表位 + β-sandwich VHH + CDR 环 + 接触线 + diffusion 粒子）、Flow Map（带自动接线边）、Sequence（残基着色 + CDR 注释 + 三张 dossier 卡）。
 - **资源**：11 个模型 / 工具、6 条轨道、3 套模板（EGFR-D3、PD-L1、HER2）。
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
-- **验证**：10 个引擎测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
+- **验证**：15 个引擎 / 后端测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
 
-**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，但结果仅在 Runs 抽屉中以序列/指标/PDB 呈现，尚未进入 Canvas 真实结构渲染。
+**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，结果可在 Runs 抽屉查看，也可把真实 CA trace 载入主 Canvas（target / VHH / CDR 分色）。RFD4 全原子/侧链渲染仍未实现。
 
 ---
 
@@ -278,6 +278,8 @@ GET /api/tamarind/jobs
   → unzip: results.csv + designs/*.pdb
   → SQLite run + designs
   → Runs drawer: design table, CDR, metrics, PDB download
+  → GET /api/designs/:id/structure
+  → Canvas drawReal3D: CA trace, target / VHH / CDR colors
 
 POST /api/tamarind/validate   (no-cost preflight)
 POST /api/tamarind/submit

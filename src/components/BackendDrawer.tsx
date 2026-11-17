@@ -104,14 +104,43 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
     return () => window.clearInterval(timer);
   }, [open]);
 
-  const selectRun = async (id: string) => {
+  const selectRun = async (id: string, scroll = false) => {
     try {
       selectedRunRef.current = id;
       const detail = await api<BackendRun>(`/api/runs/${encodeURIComponent(id)}`);
       setRun(detail);
+      if (scroll) {
+        window.setTimeout(() => {
+          document.getElementById('bd-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      }
+      return detail;
     } catch (err: any) {
       setError(err.message);
+      return null;
     }
+  };
+
+  const viewDesign = async (design: BackendRun['designs'] extends Array<infer D> ? any : any) => {
+    if (!design) return;
+    setBusy(`view-${design.id}`);
+    setError('');
+    try {
+      const structure = await api<any>(`/api/designs/${encodeURIComponent(design.id)}/structure`);
+      app.setRealDesign(structure);
+      app.toast(`Loaded ${design.designId} into the monitor`);
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const openRun = async (id: string) => {
+    const detail = await selectRun(id, true);
+    const best = detail?.designs?.[0];
+    if (best) await viewDesign(best);
   };
 
   const importLatest = async () => {
@@ -256,7 +285,7 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
                 <div className="bd-actions">
                   <Button label="Import latest into SQLite" variant="primary" size="sm" icon={<Glyph name="database" size={12} />} onClick={importLatest} isLoading={busy === 'import'} className="ll-astryx-button" />
                   {importedFor(jobsData.latestDesignJob.jobName) && (
-                    <Button label="Open persisted run" variant="secondary" size="sm" onClick={() => selectRun(importedFor(jobsData.latestDesignJob!.jobName)!.runId)} className="ll-astryx-button" />
+                    <Button label="Open persisted run" variant="secondary" size="sm" onClick={() => openRun(importedFor(jobsData.latestDesignJob!.jobName)!.runId)} className="ll-astryx-button" />
                   )}
                 </div>
               </div>
@@ -280,7 +309,7 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
                     </div>
                     <Badge label={job.status} variant={statusVariant(job.status)} />
                     {imported ? (
-                      <button className="bd-link" onClick={() => selectRun(imported.runId)}>Open</button>
+                      <button className="bd-link" onClick={() => selectRun(imported.runId, true)}>Open</button>
                     ) : (
                       <button className="bd-link" onClick={() => importJob(job)} disabled={busy === job.jobName}>
                         {busy === job.jobName ? 'Importing…' : 'Import'}
@@ -296,7 +325,7 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
             <div className="bd-section-head"><h3>Persisted runs</h3><span>SQLite</span></div>
             <div className="bd-run-list">
               {runs.map((item) => (
-                <button className={`bd-run ${run?.id === item.id ? 'selected' : ''}`} key={item.id} onClick={() => selectRun(item.id)}>
+                <button className={`bd-run ${run?.id === item.id ? 'selected' : ''}`} key={item.id} onClick={() => selectRun(item.id, true)}>
                   <span className={`bd-run-led ${/complete/i.test(item.status) ? 'done' : ''}`} />
                   <span className="bd-run-main">
                     <strong>{item.jobName}</strong>
@@ -310,7 +339,7 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
           </section>
 
           {run && (
-            <section className="bd-section bd-detail">
+            <section className="bd-section bd-detail" id="bd-detail">
               <div className="bd-section-head"><h3>Designs · {run.jobName}</h3><span>{run.designCount} rows</span></div>
               <div className="bd-run-summary">
                 <span>status <b>{run.status}</b></span>
@@ -325,6 +354,9 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
                       <span className="bd-rank">{design.rank}</span>
                       <strong>{design.designId}</strong>
                       <span className="bd-design-len">{design.sequence.length} aa</span>
+                      <button className="bd-link bd-view3d" onClick={() => viewDesign(design)} disabled={busy === `view-${design.id}`}>
+                        {busy === `view-${design.id}` ? 'Loading…' : 'View 3D'}
+                      </button>
                       <a className="bd-link" href={pdbUrl(design.id)} download>PDB ↓</a>
                     </div>
                     <div className="bd-design-metrics">

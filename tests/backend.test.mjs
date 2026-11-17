@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Store } from '../backend/db.js';
 import { normalizeJob, parseCsv, parseCdrSequences, pickLatestDesignJob } from '../backend/tamarind.js';
+import { parseCaTrace } from '../backend/pdb.js';
 import { defaultRfd4Settings } from '../backend/runner.js';
 
 test('SQLite persists projects, runs and designs across store instances', () => {
@@ -62,4 +63,26 @@ test('RFD4 defaults are submittable and keep the known test-target path', () => 
   assert.deepEqual(settings.targetChains, ['A']);
   assert.deepEqual(settings.hotspotResidues, { A: '62,63' });
   assert.equal(settings.keepConstantDomains, undefined);
+});
+
+test('PDB CA parser separates target and binder and maps CDR ranges', () => {
+  const line = (chain, seq, res, x) => `ATOM      1  CA  ${res} ${chain}${String(seq).padStart(4, ' ')}    ${x.toFixed(3).padStart(8, ' ')}   0.000   0.000  1.00  0.00           C`;
+  const pdb = [
+    line('A', 1, 'ALA', 0),
+    line('A', 2, 'GLY', 1),
+    line('H', 1, 'GLU', 5),
+    line('H', 2, 'VAL', 6),
+    line('H', 3, 'GLN', 7),
+    line('H', 4, 'LEU', 8),
+  ].join('\n');
+  const trace = parseCaTrace(pdb, {
+    targetChains: ['A'],
+    designedSequence: 'EVQL',
+    cdrSequences: { 'H-CDR1': 'VQL' },
+  });
+  assert.equal(trace.chains.length, 2);
+  assert.equal(trace.binderChain, 'H');
+  assert.deepEqual(trace.targetChains, ['A']);
+  assert.equal(trace.chains.find((c) => c.id === 'H').sequence, 'EVQL');
+  assert.deepEqual(trace.chains.find((c) => c.id === 'H').cdrs[0], { key: 'H-CDR1', start: 1, end: 3, });
 });

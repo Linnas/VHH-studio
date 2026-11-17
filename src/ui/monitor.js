@@ -77,6 +77,7 @@ export class Monitor {
     this.resize();
     this._unsubs = [];
     this._unsubs.push(this.app.on('view', () => this.syncMode()));
+    this._unsubs.push(this.app.on('realDesign', () => this.syncHud(true)));
     this._unsubs.push(this.app.on('tick', () => this.syncHud()));
     this._unsubs.push(this.app.on('playhead', () => this.syncHud()));
     this._unsubs.push(this.app.on('candidate', () => this.syncHud(true)));
@@ -205,6 +206,7 @@ export class Monitor {
     const view = this.app.state.view;
     if (view === 'flow') this.drawFlow();
     else if (view === 'sequence') this.drawSequence();
+    else if (this.app.state.realDesign) this.drawReal3D();
     else this.draw3D();
   }
 
@@ -1026,8 +1028,180 @@ export class Monitor {
     }
     ctx.restore();
   }
+  /* =============================== REAL RFD4 =============================== */
+  drawReal3D() {
+    const ctx = this.ctx;
+    const { w, h } = this;
+    const real = this.app.state.realDesign;
+    const chains = real?.chains || [];
+    const allAtoms = chains.flatMap((chain) => chain.atoms);
+    if (!allAtoms.length) {
+      ctx.fillStyle = 'rgba(139,154,172,0.8)';
+      ctx.font = '600 12px Inter, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No CA trace in this PDB', w / 2, h / 2);
+      ctx.textAlign = 'left';
+      return;
+    }
+
+    const center = real.center || { x: 0, y: 0, z: 0 };
+    const maxR = Math.max(20, real.maxRadius || 40);
+    const scale = (Math.min(w, h) * 0.64 / maxR) * this.camera.zoom;
+    const cx = w / 2;
+    const cy = h * 0.5 + 6;
+    const cyaw = Math.cos(this.camera.yaw);
+    const syaw = Math.sin(this.camera.yaw);
+    const cp = Math.cos(this.camera.pitch);
+    const sp = Math.sin(this.camera.pitch);
+    const project = (a) => {
+      let x = a.x - center.x;
+      let y = a.y - center.y;
+      let z = a.z - center.z;
+      const x1 = x * cyaw - z * syaw;
+      const z1 = x * syaw + z * cyaw;
+      const y1 = y * cp - z1 * sp;
+      const z2 = y * sp + z1 * cp;
+      const persp = 1 + z2 / (maxR * 5.2);
+      return {
+        x: cx + x1 * scale * persp,
+        y: cy - y1 * scale * persp,
+        z: z2,
+        depth: Math.max(0, Math.min(1, (z2 + maxR) / (maxR * 2))),
+      };
+    };
+
+    const glow = ctx.createRadialGradient(cx, cy, maxR * scale * 0.05, cx, cy, maxR * scale * 0.95);
+    glow.addColorStop(0, 'rgba(64,104,132,0.23)');
+    glow.addColorStop(0.55, 'rgba(35,53,68,0.08)');
+    glow.addColorStop(1, 'rgba(6,8,11,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+
+    const cdrColors = { 'H-CDR1': '#5ee7ff', 'H-CDR2': '#c8ff4d', 'H-CDR3': '#ff6fae' };
+    const segments = [];
+    for (const chain of chains) {
+      const atoms = chain.atoms;
+      const regionAt = new Map();
+      for (const cdr of chain.cdrs || []) {
+        const color = cdrColors[cdr.key] || '#ffb454';
+        for (let i = cdr.start; i <= cdr.end; i++) regionAt.set(i, { key: cdr.key, color });
+      }
+      for (let i = 0; i < atoms.length - 1; i++) {
+        const a = project(atoms[i]);
+        const b = project(atoms[i + 1]);
+        const cdr = regionAt.get(i) || regionAt.get(i + 1);
+        const isTarget = chain.role === 'target';
+        segments.push({
+          a, b, z: (a.z + b.z) / 2,
+          color: cdr ? cdr.color : (isTarget ? '#6f859a' : '#a9bdcf'),
+          width: cdr ? 5.1 : isTarget ? 3.1 : 3.8,
+          alpha: cdr ? 0.98 : isTarget ? 0.62 : 0.9,
+        });
+      }
+    }
+    segments.sort((a, b) => a.z - b.z);
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const seg of segments) {
+      ctx.strokeStyle = seg.color;
+      ctx.globalAlpha = seg.alpha * (0.48 + seg.a.depth * 0.52);
+      ctx.lineWidth = seg.width;
+      ctx.beginPath();
+      ctx.moveTo(seg.a.x, seg.a.y);
+      ctx.lineTo(seg.b.x, seg.b.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Chain callouts.
+    if (this.app.state.labels) {
+      for (const chain of chains) {
+        const projected = chain.atoms.map(project);
+        const mx = projected.reduce((s, p) => s + p.x, 0) / projected.length;
+        const my = projected.reduce((s, p) => s + p.y, 0) / projected.length;
+        const label = chain.role === 'target' ? `TARGET ${chain.id}` : `VHH ${chain.id}`;
+        this.drawTag(mx, my - 28, label, chain.role === 'target' ? '#8fa2b8' : '#c8ff4d');
+      }
+    }
+
+    // Nearest inter-chain contact, drawn as a dashed measurement.
+    const target = chains.find((c) => c.role === 'target');
+    const binder = chains.find((c) => c.role === 'binder');
+    if (target && binder) {
+      let best = null;
+      for (const a of target.atoms) {
+        for (const b of binder.atoms) {
+          const d = (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2;
+          if (!best || d < best.d) best = { d, a, b };
+        }
+      }
+      if (best) {
+        const pa = project(best.a);
+        const pb = project(best.b);
+        ctx.strokeStyle = 'rgba(233,239,247,0.32)';
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (this.app.state.labels) {
+          const mx = (pa.x + pb.x) / 2;
+          const my = (pa.y + pb.y) / 2;
+          ctx.font = '7px "JetBrains Mono", Consolas, monospace';
+          const text = `${Math.sqrt(best.d).toFixed(1)} Å`;
+          const tw = ctx.measureText(text).width;
+          ctx.fillStyle = 'rgba(8,12,17,0.78)';
+          pathRoundRect(ctx, mx - tw / 2 - 3, my - 12, tw + 6, 11, 3);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(220,232,244,0.8)';
+          ctx.fillText(text, mx - tw / 2, my - 4);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  syncRealHud(real, force = false) {
+    const metrics = real.metrics || {};
+    const ipTM = Number(metrics['oracle_ppi.iptm_coi']);
+    const plddt = Number(metrics['oracle_ppi.plddt_coi']);
+    const rmsd = Number(metrics['refolded_backbone_rmsd.rmsd']);
+    const targetChains = (real.targetChains || []).join(',') || '—';
+    const binderChain = real.binderChain || '—';
+    const pills = [
+      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>REAL PDB</span>',
+      `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
+      `<span class="mon-pill"><span class="pdot" style="--c:#c8ff4d"></span>VHH <b>${binderChain}</b></span>`,
+      Number.isFinite(ipTM) ? `<span class="mon-pill">ipTM <b>${ipTM.toFixed(0)}</b></span>` : '',
+      Number.isFinite(plddt) ? `<span class="mon-pill">pLDDT <b>${plddt.toFixed(1)}</b></span>` : '',
+      Number.isFinite(rmsd) ? `<span class="mon-pill">RMSD <b>${rmsd.toFixed(2)} Å</b></span>` : '',
+    ].filter(Boolean);
+    const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}`;
+    if (!force && key === this._hudKey) return;
+    this._hudKey = key;
+    this.kickerEl.textContent = 'RFD4 · EXECUTOR RESULT';
+    this.stageEl.textContent = `${real.designId} · ${real.binderChain || 'binder'} chain`;
+    this.pillsEl.innerHTML = pills.join('');
+    this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
+    this.liveDot.classList.remove('on', 'live');
+    this.emptyEl.classList.add('hidden');
+    this.legendEl.innerHTML = `
+      <span class="leg" style="--c:#6f859a"><i></i>Target</span>
+      <span class="leg" style="--c:#a9bdcf"><i></i>VHH framework</span>
+      <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
+      <span class="leg" style="--c:#c8ff4d"><i></i>CDR2</span>
+      <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>`;
+  }
+
   /* ================================= HUD ================================== */
   syncHud(force = false) {
+    if (this.app.state.realDesign) {
+      this.syncRealHud(this.app.state.realDesign, force);
+      return;
+    }
     const preview = this.app.preview();
     const active = preview.activeNode;
     const has = preview.hasBackbone;

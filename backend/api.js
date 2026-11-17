@@ -1,5 +1,6 @@
 import { TamarindError } from './tamarind.js';
 import { defaultRfd4Settings } from './runner.js';
+import { parseCaTrace } from './pdb.js';
 
 function sendJson(res, status, payload) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -93,6 +94,30 @@ export function createApi({ store, tamarind, manager, version = '0.3.0' }) {
       if (syncMatch && req.method === 'POST') {
         const run = await manager.syncRun(decodeURIComponent(syncMatch[1]));
         sendJson(res, 200, { run });
+        return true;
+      }
+
+      const structureMatch = path.match(/^\/api\/designs\/([^/]+)\/structure$/);
+      if (structureMatch && req.method === 'GET') {
+        const design = store.getDesign(decodeURIComponent(structureMatch[1]));
+        if (!design?.pdb) return sendJson(res, 404, { error: 'Design PDB not found' }), true;
+        const run = store.getRun(design.runId);
+        const targetChains = run?.settings?.targetChains || [];
+        const trace = parseCaTrace(design.pdb, {
+          targetChains,
+          cdrSequences: design.cdrSequences,
+          designedSequence: design.sequence,
+        });
+        sendJson(res, 200, {
+          designId: design.designId,
+          runId: design.runId,
+          jobName: run?.jobName || null,
+          sequence: design.sequence,
+          cdrSequences: design.cdrSequences,
+          metrics: design.metrics,
+          summary: run?.summary || null,
+          ...trace,
+        });
         return true;
       }
 

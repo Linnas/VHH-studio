@@ -24,9 +24,10 @@ function StageMeta({ app }: { app: any }) {
 }
 
 export function Stage({ app }: { app: any }) {
-  useAppEvents(app, ['view']);
+  useAppEvents(app, ['view', 'realDesign']);
   const monitorRef = useRef<any>(null);
   const view = app.state.view;
+  const real = app.state.realDesign;
 
   useEffect(() => {
     if (!monitorRef.current) monitorRef.current = new Monitor(app);
@@ -52,6 +53,13 @@ export function Stage({ app }: { app: any }) {
           <Tab value="sequence" label="Sequence" panelId="monitor-panel" icon={<Glyph name="dna" size={12} />} />
         </TabList>
         <div className="stage-bar-spacer" />
+        {real && (
+          <button className="ll-real-chip" onClick={() => app.clearRealDesign()} title="Return to the simulated preview">
+            <span className="ll-real-dot" />
+            RFD4 · {real.designId}
+            <span className="ll-real-x">×</span>
+          </button>
+        )}
         <StageMeta app={app} />
         <div className="stage-tools">
           <IconButton

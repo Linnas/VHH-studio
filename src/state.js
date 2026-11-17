@@ -57,6 +57,7 @@ export class App {
       selectedCandidate: 0,
       spin: Boolean(ui.spin),
       labels: ui.labels !== false,
+      realDesign: null,
     };
     this.history = [];
     this.future = [];
@@ -556,6 +557,8 @@ export class App {
     this.state.results = [];
     this.state.resultsStale = true;
     this.state.selectedCandidate = 0;
+    this.state.realDesign = null;
+    this.emit('realDesign');
     this.state.playhead = 0;
     this.project.playhead = 0;
     this.state.logs = [];
@@ -636,6 +639,22 @@ export class App {
     this.project.view = view;
     this.emit('view');
     this.saveSoon();
+  }
+
+  setRealDesign(data) {
+    this.state.realDesign = data;
+    this.state.view = '3d';
+    this.project.view = '3d';
+    this.emit('realDesign');
+    this.emit('view');
+    this.saveSoon();
+  }
+
+  clearRealDesign() {
+    if (!this.state.realDesign) return;
+    this.state.realDesign = null;
+    this.emit('realDesign');
+    this.toast('Monitor returned to simulated preview');
   }
 
   setTab(tab) {
