@@ -78,6 +78,7 @@ export class Monitor {
     this._unsubs = [];
     this._unsubs.push(this.app.on('view', () => this.syncMode()));
     this._unsubs.push(this.app.on('realDesign', () => this.syncHud(true)));
+    this._unsubs.push(this.app.on('sticks', () => this.syncHud(true)));
     this._unsubs.push(this.app.on('tick', () => this.syncHud()));
     this._unsubs.push(this.app.on('playhead', () => this.syncHud()));
     this._unsubs.push(this.app.on('candidate', () => this.syncHud(true)));
@@ -1298,6 +1299,7 @@ export class Monitor {
         emphasis: Boolean(run.region),
       });
     }
+    this.drawSidechainSticks(chains, project);
 
     // Chain callouts.
     if (this.app.state.labels) {
@@ -1357,19 +1359,20 @@ export class Monitor {
     const targetChains = (real.targetChains || []).join(',') || '—';
     const binderChain = real.binderChain || '—';
     const pills = [
-      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>CARTOON</span>',
+      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>RIBBON</span>',
       `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
-      `<span class="mon-pill"><span class="pdot" style="--c:#c8ff4d"></span>VHH <b>${binderChain}</b></span>`,
+      `<span class="mon-pill"><span class="pdot" style="--c:#b7e36a"></span>VHH <b>${binderChain}</b></span>`,
       real.ssSummary ? `<span class="mon-pill">H/S/L <b>${real.ssSummary.helix}/${real.ssSummary.sheet}/${real.ssSummary.loop}</b></span>` : '',
+      `<span class="mon-pill">STICKS <b>${this.app.state.sticks ? 'ON' : 'OFF'}</b></span>`,
       Number.isFinite(ipTM) ? `<span class="mon-pill">ipTM <b>${ipTM.toFixed(0)}</b></span>` : '',
       Number.isFinite(plddt) ? `<span class="mon-pill">pLDDT <b>${plddt.toFixed(1)}</b></span>` : '',
       Number.isFinite(rmsd) ? `<span class="mon-pill">RMSD <b>${rmsd.toFixed(2)} Å</b></span>` : '',
     ].filter(Boolean);
-    const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}`;
+    const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}|${this.app.state.sticks}`;
     if (!force && key === this._hudKey) return;
     this._hudKey = key;
-    this.kickerEl.textContent = 'RFD4 · CARTOON';
-    this.stageEl.textContent = `${real.designId} · helix / sheet / loop`;
+    this.kickerEl.textContent = 'RFD4 · RIBBON + STICKS';
+    this.stageEl.textContent = `${real.designId} · all-atom side chains`;
     this.pillsEl.innerHTML = pills.join('');
     this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
     this.liveDot.classList.remove('on', 'live');
@@ -1377,10 +1380,10 @@ export class Monitor {
     this.legendEl.innerHTML = `
       <span class="leg" style="--c:#7fa8c4"><i></i>Target helix</span>
       <span class="leg" style="--c:#6f8ca5"><i></i>Target sheet</span>
-      <span class="leg" style="--c:#d7b06b"><i></i>VHH helix</span>
       <span class="leg" style="--c:#b7e36a"><i></i>VHH β-sheet</span>
-      <span class="leg" style="--c:#b7c9d8"><i></i>Loop</span>
-      <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
+      <span class="leg" style="--c:#6cb6ff"><i></i>N</span>
+      <span class="leg" style="--c:#ff7b72"><i></i>O</span>
+      <span class="leg" style="--c:#e5c07b"><i></i>S</span>
       <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>`;
   }
 

@@ -57,6 +57,7 @@ export class App {
       selectedCandidate: 0,
       spin: Boolean(ui.spin),
       labels: ui.labels !== false,
+      sticks: ui.sticks !== false,
       realDesign: null,
     };
     this.history = [];
@@ -696,6 +697,12 @@ export class App {
     this.state.labels = !this.state.labels;
     this.saveSoon();
     this.emit('view');
+  }
+
+  toggleSticks() {
+    this.state.sticks = !this.state.sticks;
+    this.saveSoon();
+    this.emit('sticks');
   }
 
   /* --------------------------------- logging -------------------------------- */

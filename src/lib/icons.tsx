@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import {
   AlertTriangle,
+  Atom,
   Boxes,
   Check,
   ChevronDown,
@@ -39,6 +40,7 @@ import {
 
 export const Icons = {
   alert: AlertTriangle,
+  atom: Atom,
   boxes: Boxes,
   check: Check,
   chevron: ChevronDown,

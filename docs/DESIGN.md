@@ -240,7 +240,7 @@ main.tsx
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
 - **验证**：15 个引擎 / 后端测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
 
-**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，结果可在 Runs 抽屉查看，也可把真实 secondary-structure cartoon（helix / β-sheet / loop）载入主 Canvas。RFD4 全原子/侧链渲染仍未实现。
+**明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，结果可在 Runs 抽屉查看，也可把真实 backbone ribbon + all-atom side-chain sticks（helix / β-sheet / loop）载入主 Canvas。explicit-H 全原子 ribbon 仍未实现。
 
 ---
 
@@ -279,7 +279,7 @@ GET /api/tamarind/jobs
   → SQLite run + designs
   → Runs drawer: design table, CDR, metrics, PDB download
   → GET /api/designs/:id/structure
-  → Canvas drawReal3D: DSSP-lite helix / sheet / loop cartoon, target / VHH / CDR colors
+  → Canvas drawReal3D: DSSP-lite helix / sheet / loop ribbon + all-atom side-chain sticks
 
 POST /api/tamarind/validate   (no-cost preflight)
 POST /api/tamarind/submit

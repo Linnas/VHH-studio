@@ -68,7 +68,8 @@ export function parseCaTrace(pdbText, { targetChains = [], cdrSequences = {}, de
     const residues = chains.get(chainId);
     const key = resSeq;
     if (!residues.has(key)) residues.set(key, { key, resName, resSeq, atoms: {} });
-    residues.get(key).atoms[atomName] = { x, y, z };
+    const element = (line.slice(76, 78).trim() || atomName[0] || 'C').toUpperCase();
+    residues.get(key).atoms[atomName] = { x, y, z, element };
   }
 
   const targetSet = new Set((targetChains || []).map((c) => String(c).trim()).filter(Boolean));
@@ -122,11 +123,31 @@ export function parseCaTrace(pdbText, { targetChains = [], cdrSequences = {}, de
       z: r.atoms.CA.z,
       ss: ss[i],
     }));
+    const allAtomResidues = residues.map((r, i) => {
+      const atoms = Object.entries(r.atoms)
+        .filter(([, atom]) => atom.element !== 'H')
+        .map(([name, atom]) => ({ name, element: atom.element, x: atom.x, y: atom.y, z: atom.z }));
+      const bonds = [];
+      for (let a = 0; a < atoms.length; a++) {
+        for (let b = a + 1; b < atoms.length; b++) {
+          const distance = Math.hypot(atoms[a].x - atoms[b].x, atoms[a].y - atoms[b].y, atoms[a].z - atoms[b].z);
+          if (distance > 0.4 && distance < 1.9) bonds.push([atoms[a].name, atoms[b].name]);
+        }
+      }
+      return {
+        resSeq: r.resSeq,
+        resName: r.resName,
+        aa: AA3[r.resName] || 'X',
+        ss: ss[i],
+        atoms,
+        bonds,
+      };
+    });
     const sequence = atoms.map((a) => a.aa).join('');
     const role = targetSet.size ? (targetSet.has(id) ? 'target' : 'binder') : 'target';
     const ssSummary = { helix: 0, sheet: 0, loop: 0 };
     for (const s of ss) ssSummary[s] += 1;
-    result.push({ id, role, sequence, atoms, ssSummary });
+    result.push({ id, role, sequence, atoms, residues: allAtomResidues, ssSummary });
   }
 
   if (!targetSet.size && result.length > 1) {

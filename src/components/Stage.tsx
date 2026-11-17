@@ -24,7 +24,7 @@ function StageMeta({ app }: { app: any }) {
 }
 
 export function Stage({ app }: { app: any }) {
-  useAppEvents(app, ['view', 'realDesign']);
+  useAppEvents(app, ['view', 'realDesign', 'sticks']);
   const monitorRef = useRef<any>(null);
   const view = app.state.view;
   const real = app.state.realDesign;
@@ -80,6 +80,16 @@ export function Stage({ app }: { app: any }) {
             isDisabled={view !== '3d'}
             onClick={() => app.toggleLabels()}
             tooltip="Toggle labels"
+            className="ll-astryx-icon"
+          />
+          <IconButton
+            label="Toggle side-chain sticks"
+            icon={<Glyph name="atom" size={13} />}
+            variant={app.state.sticks ? 'secondary' : 'ghost'}
+            size="sm"
+            isDisabled={!real || view !== '3d'}
+            onClick={() => app.toggleSticks()}
+            tooltip={app.state.sticks ? 'Hide side-chain sticks' : 'Show side-chain sticks'}
             className="ll-astryx-icon"
           />
           <IconButton
