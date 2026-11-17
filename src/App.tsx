@@ -110,6 +110,29 @@ export function App() {
     };
   }, [app]);
 
+  // Default view: the newest persisted RFD4 run, not the old EGFR-D3 demo.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { runs = [] } = await api<{ runs: any[] }>('/api/runs?limit=1');
+        if (!runs.length) return;
+        const detail = await api<any>(`/api/runs/${encodeURIComponent(runs[0].id)}`);
+        const best = detail.designs?.[0];
+        if (!best) return;
+        const structure = await api<any>(`/api/designs/${encodeURIComponent(best.id)}/structure`);
+        if (cancelled) return;
+        app.setRealDesign(structure);
+        app.setProjectName(`RFD4 · ${best.designId}`);
+      } catch (error: any) {
+        console.warn('Could not load persisted run:', error.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [app]);
+
   return (
     <div id="app" className="ll-root">
       <Topbar app={app} onOpenRuns={() => setRunsOpen(true)} />

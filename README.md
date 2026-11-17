@@ -116,11 +116,11 @@ npm run dev
 ```bash
 npm run build             # 生产构建到 dist/
 npm run typecheck         # tsc --noEmit
-npm test                  # 引擎 / 后端 / 导出器 15 个测试
+npm test                  # 引擎 / 后端 / 导出器 16 个测试
 node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启动 4173
 ```
 
-首次打开会载入一个 8 片段的 EGFR-D3 demo 时间线。按 **Space** 播放，或点右上角 **Render**，约 10 秒后得到 4 个候选设计。
+首次打开不再载入 EGFR-D3 demo 时间线：时间线为空，自动加载后端最新的 persisted RFD4 run（当前是 `rfd4_design_008`）。没有 persisted run 时显示空监视器；拖入模型可重新构建 pipeline。
 
 > Astryx 目前是 Beta；本项目锁定 `@astryxdesign/core@0.7.16`。Astryx 的安装脚本可能被 npm 的 allowScripts 策略拦截，但预编译 CSS/JS 仍可正常构建与运行。
 
@@ -130,7 +130,7 @@ node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启�
 | --- | --- |
 | ![render](shots/02-render.png) | ![flow](shots/03-flow.png) |
 
-| Sequence Viewer | 初始时间线 |
+| Sequence Viewer | 默认加载最新 persisted RFD4 run |
 | --- | --- |
 | ![sequence](shots/04-sequence.png) | ![initial](shots/01-overview.png) |
 
@@ -232,7 +232,7 @@ vhh-studio/
 │  │  └─ Toasts.tsx
 │  ├─ lib/                    # app-event hook + Lucide icon map
 │  ├─ engine/
-│  │  ├─ models.js            # 11 个模型、6 条轨道、3 套模板
+│  │  ├─ models.js            # 11 个模型、6 条轨道、2 套用户模板
 │  │  ├─ compiler.js          # timeline → typed DAG + diagnostics
 │  │  ├─ runtime.js           # playhead 驱动的模拟运行时
 │  │  ├─ structure.js         # 程序化几何、序列设计、PDB/FASTA/CSV
@@ -309,7 +309,7 @@ interface Adapter {
 
 ## MVP 边界
 
-**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、3 套模板、确定性模拟引擎、15 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + backbone ribbon / all-atom side-chain sticks 监视器**。
+**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、2 套用户模板、确定性模拟引擎、16 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + backbone ribbon / all-atom side-chain sticks 监视器 + 默认加载最新 persisted run**。
 
 **未实现**：全原子 ribbon 精度（当前 ribbon 为骨架 cartoon 近似并存 side-chain sticks，不是 explicit-H 全原子模型）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
 

@@ -439,7 +439,8 @@ const TEMPLATE_DEFS = [
 ];
 
 export function listTemplates() {
-  return TEMPLATE_DEFS.map((d) => ({ id: d.id, name: d.name, meta: d.meta, color: d.color, target: d.target, clips: d.clips.length }));
+  // The EGFR de novo walkthrough is kept only as an internal test fixture.
+  return TEMPLATE_DEFS.filter((d) => d.id !== 'egfr-denovo').map((d) => ({ id: d.id, name: d.name, meta: d.meta, color: d.color, target: d.target, clips: d.clips.length }));
 }
 
 export function instantiateTemplate(id) {
@@ -475,5 +476,19 @@ export function makeProject(templateId = 'egfr-denovo') {
 }
 
 export function defaultProject() {
-  return makeProject('egfr-denovo');
+  return {
+    schema: 'loopline.project/1',
+    id: `prj_${Date.now().toString(36)}`,
+    name: 'Untitled VHH program',
+    seed: 20261112,
+    fps: 24,
+    target: null,
+    clips: [],
+    playhead: 0,
+    duration: 12,
+    view: '3d',
+    createdAt: new Date().toISOString(),
+    runtime: 'simulation',
+    version: 1,
+  };
 }

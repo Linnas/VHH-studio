@@ -128,6 +128,7 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
     try {
       const structure = await api<any>(`/api/designs/${encodeURIComponent(design.id)}/structure`);
       app.setRealDesign(structure);
+      app.setProjectName(`RFD4 · ${design.designId}`);
       app.toast(`Loaded ${design.designId} into the monitor`);
       onClose();
     } catch (err: any) {

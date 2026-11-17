@@ -140,24 +140,39 @@ function ProjectView({ app }: { app: any }) {
       <div className="ins-empty-title">Program settings</div>
       <div className="ins-empty-sub">Select a clip to edit parameters and inspect its auto-wiring.</div>
 
-      <div className="project-card">
-        <div className="pc-top">
-          <span className="pc-name">{target.name}</span>
-          <span className="pc-tag">DEMO SURFACE</span>
+      {target ? (
+        <div className="project-card">
+          <div className="pc-top">
+            <span className="pc-name">{target.name}</span>
+            <span className="pc-tag">DEMO SURFACE</span>
+          </div>
+          <div className="pc-rows">
+            <div className="pc-row"><span>Asset</span><b>{target.pdb}</b></div>
+            <div className="pc-row"><span>Organism</span><b>{target.organism}</b></div>
+            <div className="pc-row"><span>Surface area</span><b>~{preview.structure.epitope.area.toLocaleString()} Å² patch</b></div>
+          </div>
+          <div className="epitope-chips">
+            {target.hotspots.map((h: string) => <span className="res-chip" key={h}>{h}</span>)}
+          </div>
         </div>
-        <div className="pc-rows">
-          <div className="pc-row"><span>Asset</span><b>{target.pdb}</b></div>
-          <div className="pc-row"><span>Organism</span><b>{target.organism}</b></div>
-          <div className="pc-row"><span>Surface area</span><b>~{preview.structure.epitope.area.toLocaleString()} Å² patch</b></div>
+      ) : (
+        <div className="project-card project-card-empty">
+          <div className="pc-top">
+            <span className="pc-name">No target loaded</span>
+            <span className="pc-tag">PERSISTED RUN</span>
+          </div>
+          <div className="pc-rows">
+            <div className="pc-row"><span>Source</span><b>Runs import</b></div>
+            <div className="pc-row"><span>Timeline</span><b>Empty by default</b></div>
+          </div>
+          <p className="project-empty-note">The newest persisted RFD4 run is shown in the monitor. Add a Target Intake clip to build a new simulated pipeline.</p>
         </div>
-        <div className="epitope-chips">
-          {target.hotspots.map((h: string) => <span className="res-chip" key={h}>{h}</span>)}
-        </div>
-      </div>
+      )}
 
       <div className="field ll-native-field" style={{ marginTop: 12 }}>
         <div className="field-head"><label>Target antigen</label></div>
-        <select value={target.id} onChange={(e) => app.setTarget(e.target.value)}>
+        <select value={target?.id || ''} onChange={(e) => e.target.value && app.setTarget(e.target.value)}>
+          <option value="" disabled>Select target</option>
           {Object.values(TARGETS).map((t: any) => (
             <option value={t.id} key={t.id}>{t.name}</option>
           ))}

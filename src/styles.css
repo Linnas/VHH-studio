@@ -546,6 +546,7 @@ kbd {
 .pc-rows { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; }
 .pc-row { display: flex; justify-content: space-between; gap: 8px; font-size: 8.5px; color: var(--dim); }
 .pc-row b { font-family: var(--mono); font-weight: 500; color: var(--muted); text-align: right; }
+.project-empty-note { margin: 9px 0 0; font-size: 8px; line-height: 1.5; color: var(--faint); }
 .cdr3-block { margin: 4px 0 8px; padding: 6px 7px; border-radius: 5px; background: #090e14; border: 1px solid var(--line-soft); }
 .cdr3-block span { font-family: var(--mono); font-size: 7px; letter-spacing: .4px; color: var(--dim); text-transform: uppercase; }
 .cdr3-block b { display: block; margin-top: 3px; font-family: var(--mono); font-size: 8px; line-height: 1.5; font-weight: 500; color: var(--pink); word-break: break-all; }

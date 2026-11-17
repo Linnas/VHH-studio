@@ -8,8 +8,22 @@ import { compile } from '../src/engine/compiler.js';
 import { Engine } from '../src/engine/runtime.js';
 import { toPDB, toFasta, toCSV } from '../src/engine/structure.js';
 
-test('default project compiles into a valid typed DAG', () => {
+function demoProject() {
+  return makeProject('egfr-denovo');
+}
+
+test('default project starts empty instead of loading the EGFR demo', () => {
   const project = defaultProject();
+  assert.equal(project.name, 'Untitled VHH program');
+  assert.equal(project.target, null);
+  assert.equal(project.clips.length, 0);
+  const result = compile(project);
+  assert.equal(result.valid, true);
+  assert.equal(result.nodes.filter((n) => n.model).length, 0);
+});
+
+test('demo pipeline fixture compiles into a valid typed DAG', () => {
+  const project = demoProject();
   const result = compile(project);
   assert.equal(result.valid, true);
   assert.equal(result.errors.length, 0);
@@ -21,7 +35,7 @@ test('default project compiles into a valid typed DAG', () => {
 });
 
 test('missing epitope breaks backbone generation with a clear diagnostic', () => {
-  const project = defaultProject();
+  const project = demoProject();
   project.clips = project.clips.filter((c) => c.modelId !== 'epitope-scan');
   const result = compile(project);
   assert.equal(result.valid, false);
@@ -31,7 +45,7 @@ test('missing epitope breaks backbone generation with a clear diagnostic', () =>
 });
 
 test('a downstream clip that starts too early is rejected', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const mpnn = project.clips.find((c) => c.modelId === 'proteinmpnn');
   mpnn.start = 5;
   const result = compile(project);
@@ -49,7 +63,7 @@ test('templates compile cleanly', () => {
 });
 
 test('project duration is stable and only grows to fit clips', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const startDuration = project.duration;
   assert.equal(projectDuration(project), startDuration);
   const last = project.clips[project.clips.length - 1];
@@ -58,7 +72,7 @@ test('project duration is stable and only grows to fit clips', () => {
 });
 
 test('engine produces deterministic structural + sequence artifacts', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const a = new Engine(project);
   const b = new Engine(project);
   const ra = a.results(project.duration);
@@ -76,7 +90,7 @@ test('engine produces deterministic structural + sequence artifacts', () => {
 });
 
 test('preview exposes the expected staged state', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const engine = new Engine(project);
 
   const atZero = engine.preview(0);
@@ -98,7 +112,7 @@ test('preview exposes the expected staged state', () => {
 });
 
 test('design metrics stay in plausible, clearly-simulated ranges', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const designs = new Engine(project).results(project.duration);
   for (const d of designs) {
     assert.ok(d.metrics.ipTM >= 0.6 && d.metrics.ipTM <= 1);
@@ -111,7 +125,7 @@ test('design metrics stay in plausible, clearly-simulated ranges', () => {
 });
 
 test('exporters emit FASTA, CSV and a provenance-labelled PDB', () => {
-  const project = defaultProject();
+  const project = demoProject();
   const engine = new Engine(project);
   const payload = engine.exportPayload(project.duration);
   const design = payload.designs[0];

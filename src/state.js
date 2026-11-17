@@ -17,6 +17,11 @@ function loadProject() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.schema === 'loopline.project/1' && Array.isArray(parsed.clips)) {
+        // The old EGFR-D3 walkthrough was a demo, not user work.
+        if (parsed.name === 'EGFR-D3 · de novo VHH') {
+          localStorage.removeItem(STORAGE_KEY);
+          return defaultProject();
+        }
         parsed.duration = projectDuration(parsed);
         return parsed;
       }
@@ -399,6 +404,13 @@ export class App {
       }
     });
     this.toast(`Target switched to ${target.short}`);
+  }
+
+  setProjectName(name) {
+    if (!name || this.project.name === name) return;
+    this.project.name = name;
+    this.emit('project');
+    this.saveSoon();
   }
 
   applyTemplate(templateId) {

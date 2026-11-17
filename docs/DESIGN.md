@@ -148,9 +148,9 @@ Tamarind Bio：`POST /api/submit-job` 提交 `rfd4-proteina`，`GET /api/jobs?jo
 ```json
 {
   "schema": "loopline.project/1",
-  "name": "EGFR-D3 · de novo VHH",
+  "name": "PD-L1 · epitope-locked VHH",
   "seed": 20261112,
-  "target": { "name": "EGFR domain III", "source": "demo", "hotspots": ["R353", "S356", "D355", "K357"] },
+  "target": { "name": "PD-L1 IgV", "source": "demo", "hotspots": ["Y56", "E58", "R113", "M115"] },
   "tracks": ["target", "epitope", "backbone", "sequence", "validate", "deliver"],
   "clips": [
     {
@@ -172,7 +172,7 @@ Tamarind Bio：`POST /api/submit-job` 提交 `rfd4-proteina`，`GET /api/jobs?jo
 
 **做**
 - 时间线：拖入模型、横向移动、跨轨移动、右边缘裁剪、吸附、缩放、播放头 scrub、删除/复制、撤销重做。
-- 6 条轨道、11 个模型 / 工具资源、3 套模板。
+- 6 条轨道、11 个模型 / 工具资源、2 套用户模板。
 - 编译器：类型检查、自动接线、错误/警告、运行前诊断。
 - 播放/渲染：播放头驱动、逐片段计算、进度、日志、结果。
 - 监视器：可旋转缩放的结构视图（抗原表面 + 表位 + VHH 骨架 + 3 个 CDR 环）、Flow Map 工作流视图、Sequence 视图。
@@ -228,7 +228,7 @@ main.tsx
 - `@astryxdesign/core@0.7.16` + `@astryxdesign/theme-neutral` + `@stylexjs/stylex`
 - 自定义主题：`defineTheme({extends: neutralTheme, tokens: …})`
 - 生产：`npm start` 先 `vite build`，由 `server.mjs` 提供 `dist/`；开发：`npm run dev`（Vite HMR）
-- 验证：`npm run typecheck`、`npm test`（15 个引擎 / 后端测试）、`npm run build`、`tools/cdp.mjs` headless 截图
+- 验证：`npm run typecheck`、`npm test`（16 个引擎 / 后端测试）、`npm run build`、`tools/cdp.mjs` headless 截图
 
 ### 8.3 功能清单
 
@@ -236,9 +236,9 @@ main.tsx
 - **编译器**：按开始时间自动接线，缺输入 / 上游未完成 / 同轨重叠 / 越界均有诊断。
 - **运行时**：播放头驱动的 artifact 计算，缓存失效，逐片段日志，2× Render，完成自动切 Results。
 - **监视器**：Canvas 2D 自绘的 3D 示意（抗原表面点云 + 表位 + β-sandwich VHH + CDR 环 + 接触线 + diffusion 粒子）、Flow Map（带自动接线边）、Sequence（残基着色 + CDR 注释 + 三张 dossier 卡）。
-- **资源**：11 个模型 / 工具、6 条轨道、3 套模板（EGFR-D3、PD-L1、HER2）。
+- **资源**：11 个模型 / 工具、6 条轨道、2 套模板（PD-L1、HER2）；EGFR-D3 只保留为内部测试 fixture。
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
-- **验证**：15 个引擎 / 后端测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
+- **验证**：16 个引擎 / 后端测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。
 
 **明确边界**：当前 `Engine` 使用确定性模拟；结构是程序化示意，指标为模拟值，UI 与导出文件均标注 `SIMULATION`。真实 RFdiffusion / PROTEINA / ProteinMPNN / ESMFold / Boltz 尚未接入；**Tamarind RFD4-Proteina 已在 v0.3 接入**，结果可在 Runs 抽屉查看，也可把真实 backbone ribbon + all-atom side-chain sticks（helix / β-sheet / loop）载入主 Canvas。explicit-H 全原子 ribbon 仍未实现。
 
@@ -271,6 +271,13 @@ events(id, run_id, level, message, created_at)
 ### 9.3 RFD4 闭环
 
 ```
+App boot
+  → GET /api/runs?limit=1
+  → GET /api/runs/:id
+  → GET /api/designs/:id/structure
+  → load best design into Canvas (timeline stays empty)
+  → legacy EGFR-D3 localStorage project is discarded
+
 GET /api/tamarind/jobs
   → pickLatestDesignJob (rfd4-proteina + Complete + Created desc)
   → POST /api/tamarind/import-latest

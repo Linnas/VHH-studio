@@ -1218,6 +1218,76 @@ export class Monitor {
     }
     ctx.restore();
   }
+  drawSidechainSticks(chains, project) {
+    if (!this.app.state.sticks) return;
+    const ctx = this.ctx;
+    const backboneNames = new Set(['N', 'CA', 'C', 'O']);
+    const binderCAs = [];
+    for (const chain of chains) {
+      if (chain.role !== 'binder') continue;
+      for (const res of chain.residues || []) {
+        const ca = res.atoms?.find((a) => a.name === 'CA');
+        if (ca) binderCAs.push(ca);
+      }
+    }
+    const sticks = [];
+    for (const chain of chains) {
+      const isTarget = chain.role === 'target';
+      for (const res of chain.residues || []) {
+        const ca = res.atoms?.find((a) => a.name === 'CA');
+        if (!ca) continue;
+        if (isTarget) {
+          let near = false;
+          for (const b of binderCAs) {
+            if ((ca.x - b.x) ** 2 + (ca.y - b.y) ** 2 + (ca.z - b.z) ** 2 < 81) {
+              near = true;
+              break;
+            }
+          }
+          if (!near) continue;
+        }
+        const atomMap = new Map((res.atoms || []).map((a) => [a.name, a]));
+        for (const [nameA, nameB] of res.bonds || []) {
+          const a = atomMap.get(nameA);
+          const b = atomMap.get(nameB);
+          if (!a || !b) continue;
+          if (backboneNames.has(nameA) && backboneNames.has(nameB)) continue;
+          const pa = project(a);
+          const pb = project(b);
+          const element = b.element === 'N' || b.element === 'O' || b.element === 'S'
+            ? b.element
+            : a.element === 'N' || a.element === 'O' || a.element === 'S' ? a.element : 'C';
+          const color = element === 'N' ? '#6cb6ff' : element === 'O' ? '#ff7b72' : element === 'S' ? '#e5c07b'
+            : (isTarget ? '#9db1c4' : '#d7e2ee');
+          sticks.push({
+            a: pa, b: pb, color,
+            alpha: 0.44 + ((pa.depth + pb.depth) / 2) * 0.56,
+            z: (pa.z + pb.z) / 2,
+            atom: element,
+          });
+        }
+      }
+    }
+    sticks.sort((x, y) => x.z - y.z);
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const stick of sticks) {
+      ctx.strokeStyle = rgba(stick.color, stick.alpha);
+      ctx.lineWidth = 1.35;
+      ctx.beginPath();
+      ctx.moveTo(stick.a.x, stick.a.y);
+      ctx.lineTo(stick.b.x, stick.b.y);
+      ctx.stroke();
+      if (stick.atom !== 'C') {
+        ctx.fillStyle = rgba(stick.color, stick.alpha);
+        ctx.beginPath();
+        ctx.arc(stick.b.x, stick.b.y, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   /* =============================== REAL RFD4 =============================== */
   drawReal3D() {
     const ctx = this.ctx;

@@ -29,9 +29,8 @@ export function compile(project) {
   const edges = [];
   const completed = [];
 
-  if (!clips.length) {
-    errors.push({ code: 'empty', message: 'Timeline is empty. Drag a model onto a track to start.', clipId: null });
-  }
+  // An empty timeline is a valid blank program; the monitor can still show a
+  // persisted RFD4 run.
 
   for (const clip of clips) {
     const model = MODEL_BY_ID[clip.modelId];
