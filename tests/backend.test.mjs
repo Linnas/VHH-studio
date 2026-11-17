@@ -85,4 +85,6 @@ test('PDB CA parser separates target and binder and maps CDR ranges', () => {
   assert.deepEqual(trace.targetChains, ['A']);
   assert.equal(trace.chains.find((c) => c.id === 'H').sequence, 'EVQL');
   assert.deepEqual(trace.chains.find((c) => c.id === 'H').cdrs[0], { key: 'H-CDR1', start: 1, end: 3, });
+  assert.equal(trace.chains.find((c) => c.id === 'H').atoms[0].ss, 'loop');
+  assert.deepEqual(trace.ssSummary, { helix: 0, sheet: 0, loop: 6 });
 });

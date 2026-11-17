@@ -349,6 +349,209 @@ export class Monitor {
     ctx.restore();
   }
 
+  /* ============================== CARTOON ================================= */
+  normalizeSs(ss) {
+    if (ss === 'strand' || ss === 'sheet') return 'sheet';
+    if (ss === 'helix') return 'helix';
+    return 'loop';
+  }
+
+  buildCartoonRuns(atoms, regionAt) {
+    const runs = [];
+    let current = null;
+    for (let i = 0; i < atoms.length; i++) {
+      const ss = this.normalizeSs(atoms[i].ss);
+      const region = regionAt?.(i) || null;
+      const key = `${ss}:${region || ''}`;
+      if (!current || current.key !== key) {
+        current = { key, ss, region, start: i, end: i };
+        runs.push(current);
+      } else {
+        current.end = i;
+      }
+    }
+    return runs;
+  }
+
+  drawCartoonRun(points, ss, color, { alpha = 1, emphasis = false, width = 1 } = {}) {
+    if (!points.length) return;
+    const ctx = this.ctx;
+    if (points.length === 1) {
+      ctx.fillStyle = rgba(color, 0.9 * alpha);
+      ctx.beginPath();
+      ctx.arc(points[0].x, points[0].y, emphasis ? 3.2 : 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    if (ss === 'sheet') {
+      this.drawSheetRun(points, color, alpha);
+      return;
+    }
+    if (ss === 'helix') {
+      this.drawHelixRun(points, color, alpha);
+      return;
+    }
+    this.drawLoopRun(points, color, alpha, emphasis, width);
+  }
+
+  drawSheetRun(points, color, alpha) {
+    const ctx = this.ctx;
+    const n = points.length;
+    const left = [];
+    const right = [];
+    for (let i = 0; i < n; i++) {
+      const prev = points[Math.max(0, i - 1)];
+      const next = points[Math.min(n - 1, i + 1)];
+      let tx = next.x - prev.x;
+      let ty = next.y - prev.y;
+      const len = Math.hypot(tx, ty) || 1;
+      tx /= len;
+      ty /= len;
+      const nx = -ty;
+      const ny = tx;
+      const width = (i === n - 1 ? 5.1 : 3.8);
+      left.push({ x: points[i].x + nx * width, y: points[i].y + ny * width });
+      right.push({ x: points[i].x - nx * width, y: points[i].y - ny * width });
+    }
+    const end = points[n - 1];
+    const prev = points[n - 2];
+    let dx = end.x - prev.x;
+    let dy = end.y - prev.y;
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl;
+    dy /= dl;
+    const nx = -dy;
+    const ny = dx;
+    const baseL = { x: end.x + nx * 7.1, y: end.y + ny * 7.1 };
+    const baseR = { x: end.x - nx * 7.1, y: end.y - ny * 7.1 };
+    const tip = { x: end.x + dx * 9, y: end.y + dy * 9 };
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(left[0].x, left[0].y);
+    for (let i = 1; i < left.length; i++) ctx.lineTo(left[i].x, left[i].y);
+    ctx.lineTo(baseL.x, baseL.y);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.lineTo(baseR.x, baseR.y);
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+    ctx.closePath();
+    ctx.fillStyle = rgba(color, 0.92 * alpha);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(5,8,11,${0.8 * alpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${0.18 * alpha})`;
+    ctx.lineWidth = 0.7;
+    const mid = Math.floor(n / 2);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    ctx.lineTo(points[mid].x, points[mid].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawHelixRun(points, color, alpha) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // A spring-like coil reads as a helix much faster than a plain tube.
+    const buildCoil = (phaseOffset) => {
+      const samples = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        let tx = b.x - a.x;
+        let ty = b.y - a.y;
+        const len = Math.hypot(tx, ty) || 1;
+        tx /= len;
+        ty /= len;
+        const nx = -ty;
+        const ny = tx;
+        for (let s = 0; s < 5; s++) {
+          const t = s / 5;
+          const phase = (i + t) * 2.05 + phaseOffset;
+          const off = Math.sin(phase) * 5.1;
+          samples.push({ x: a.x + (b.x - a.x) * t + nx * off, y: a.y + (b.y - a.y) * t + ny * off });
+        }
+      }
+      return samples;
+    };
+
+    const main = buildCoil(0);
+    ctx.strokeStyle = `rgba(4,7,10,${0.5 * alpha})`;
+    ctx.lineWidth = 4.6;
+    ctx.beginPath();
+    main.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+
+    ctx.strokeStyle = rgba(color, 0.96 * alpha);
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    main.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+
+    const back = buildCoil(Math.PI);
+    ctx.strokeStyle = rgba(color, 0.42 * alpha);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    back.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+
+    ctx.strokeStyle = rgba(color, 0.24 * alpha);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawLoopRun(points, color, alpha, emphasis = false, width = 1) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = `rgba(4,7,10,${0.55 * alpha})`;
+    ctx.lineWidth = (emphasis ? 5.8 : 3.7) * width;
+    ctx.beginPath();
+    points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+    ctx.strokeStyle = rgba(color, (emphasis ? 0.98 : 0.9) * alpha);
+    ctx.lineWidth = (emphasis ? 4 : 2.2) * width;
+    ctx.beginPath();
+    points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawArrowhead(points, color, alpha) {
+    if (points.length < 2) return;
+    const ctx = this.ctx;
+    const end = points[points.length - 1];
+    const prev = points[points.length - 2];
+    let dx = end.x - prev.x;
+    let dy = end.y - prev.y;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+    const nx = -dy;
+    const ny = dx;
+    const size = 5.4;
+    ctx.save();
+    ctx.fillStyle = rgba(color, 0.95 * alpha);
+    ctx.strokeStyle = `rgba(4,7,10,${0.45 * alpha})`;
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(end.x + dx * size, end.y + dy * size);
+    ctx.lineTo(end.x - dx * 1.5 + nx * size * 0.72, end.y - dy * 1.5 + ny * size * 0.72);
+    ctx.lineTo(end.x - dx * 1.5 - nx * size * 0.72, end.y - dy * 1.5 - ny * size * 0.72);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   drawVHH(preview, project, { diffusing, alpha, structure }) {
     const ctx = this.ctx;
     const residues = structure.vhh.residues;
@@ -375,63 +578,49 @@ export class Monitor {
       };
     });
     const projected = jittered.map((r) => ({ r, q: project(r) }));
-    const segments = [];
-    for (let i = 0; i < projected.length - 1; i++) {
-      const a = projected[i];
-      const b = projected[i + 1];
-      if (a.r.region !== b.r.region && (a.r.region === 'framework' || b.r.region === 'framework')) {
-        // still connect; color follows the non-framework side for a crisp junction
-      }
-      const region = a.r.region !== 'framework' ? a.r.region : b.r.region;
-      segments.push({ a, b, region, z: (a.q.z + b.q.z) / 2, index: i });
-    }
-    segments.sort((x, y) => x.z - y.z);
-
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // Soft underlay to lift the domain off the target.
-    ctx.strokeStyle = `rgba(4,7,10,${0.26 * alpha})`;
-    ctx.lineWidth = clamp(projected[0].q.s * 0.19, 4.5, 9);
+    ctx.strokeStyle = `rgba(4,7,10,${0.5 * alpha})`;
+    ctx.lineWidth = 5.2;
     ctx.beginPath();
     projected.forEach(({ q }, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
     ctx.stroke();
-
-    for (const seg of segments) {
-      const isStrand = seg.a.r.ss === 'strand' && seg.b.r.ss === 'strand';
-      const width = seg.region === 'cdr3' ? 4.9 : seg.region === 'framework' ? (isStrand ? 5.3 : 2.4) : 4.5;
-      const q = seg.a.q;
-      const depthA = 0.55 + q.depth * 0.45;
-      const color = seg.region === 'framework'
-        ? (isStrand
-          ? `rgba(190,207,226,${(0.82 + (seg.index % 3) * 0.05) * alpha * depthA})`
-          : `rgba(112,132,152,${(0.42 + (seg.index % 2) * 0.08) * alpha * depthA})`)
-        : rgb(seg.region, 0.94 * alpha * depthA);
-      if (seg.region === 'cdr3') {
-        ctx.strokeStyle = rgb('cdr3', 0.12 * alpha);
-        ctx.lineWidth = 9;
-        ctx.beginPath();
-        ctx.moveTo(seg.a.q.x, seg.a.q.y);
-        ctx.lineTo(seg.b.q.x, seg.b.q.y);
-        ctx.stroke();
-      }
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      ctx.moveTo(q.x, q.y);
-      ctx.lineTo(seg.b.q.x, seg.b.q.y);
-      ctx.stroke();
-    }
-
-    // Backbone nodes for texture.
-    for (const { r, q } of projected) {
-      if (r.region === 'framework') continue;
-      ctx.fillStyle = rgb(r.region, 0.55 * alpha);
-      ctx.beginPath();
-      ctx.arc(q.x, q.y, 1.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.strokeStyle = `rgba(174,193,213,${0.5 * alpha})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    projected.forEach(({ q }, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(196,212,228,${0.72 * alpha})`;
+    ctx.lineWidth = 3.7;
+    ctx.beginPath();
+    projected.forEach(({ q }, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+    ctx.stroke();
     ctx.restore();
+    const regionAt = (i) => (jittered[i].region === 'framework' ? null : jittered[i].region);
+    const runs = this.buildCartoonRuns(jittered, regionAt)
+      .map((run) => {
+        const points = projected.slice(run.start, run.end + 1).map((p) => p.q);
+        const depth = points.reduce((s, p) => s + p.depth, 0) / points.length;
+        const color = run.region
+          ? REGION_COLORS[run.region]
+          : run.ss === 'sheet' ? '#c3d2e1' : '#8094a7';
+        return { ...run, points, depth, color };
+      })
+      .sort((a, b) => {
+        const za = a.points.reduce((s, p) => s + p.z, 0) / a.points.length;
+        const zb = b.points.reduce((s, p) => s + p.z, 0) / b.points.length;
+        return za - zb;
+      });
+    for (const run of runs) {
+      if (run.region) {
+        this.drawLoopRun(run.points, REGION_COLORS[run.region], alpha * (0.55 + run.depth * 0.45), true, 1);
+      } else if (run.ss === 'sheet') {
+        this.drawArrowhead(run.points, '#c3d2e1', alpha * (0.55 + run.depth * 0.45));
+      } else {
+        this.drawLoopRun(run.points, '#8094a7', alpha * (0.4 + run.depth * 0.4), false, 1.1);
+      }
+    }
 
     if (this.app.state.labels && !diffusing) {
       // Stack CDR callouts to the right of the domain so they never collide.
@@ -1078,41 +1267,37 @@ export class Monitor {
     ctx.fillRect(0, 0, w, h);
 
     const cdrColors = { 'H-CDR1': '#5ee7ff', 'H-CDR2': '#c8ff4d', 'H-CDR3': '#ff6fae' };
-    const segments = [];
+    const cartoonRuns = [];
     for (const chain of chains) {
-      const atoms = chain.atoms;
-      const regionAt = new Map();
+      const cdrAt = new Map();
       for (const cdr of chain.cdrs || []) {
-        const color = cdrColors[cdr.key] || '#ffb454';
-        for (let i = cdr.start; i <= cdr.end; i++) regionAt.set(i, { key: cdr.key, color });
+        for (let i = cdr.start; i <= cdr.end; i++) cdrAt.set(i, cdr.key);
       }
-      for (let i = 0; i < atoms.length - 1; i++) {
-        const a = project(atoms[i]);
-        const b = project(atoms[i + 1]);
-        const cdr = regionAt.get(i) || regionAt.get(i + 1);
+      for (const run of this.buildCartoonRuns(chain.atoms, (i) => cdrAt.get(i))) {
+        const points = chain.atoms.slice(run.start, run.end + 1).map(project);
+        const depth = points.reduce((s, p) => s + p.depth, 0) / points.length;
         const isTarget = chain.role === 'target';
-        segments.push({
-          a, b, z: (a.z + b.z) / 2,
-          color: cdr ? cdr.color : (isTarget ? '#6f859a' : '#a9bdcf'),
-          width: cdr ? 5.1 : isTarget ? 3.1 : 3.8,
-          alpha: cdr ? 0.98 : isTarget ? 0.62 : 0.9,
-        });
+        const color = run.region
+          ? (cdrColors[run.region] || '#ffb454')
+          : run.ss === 'helix'
+            ? (isTarget ? '#7fa8c4' : '#d7b06b')
+            : run.ss === 'sheet'
+              ? (isTarget ? '#6f8ca5' : '#b7e36a')
+              : (isTarget ? '#50697d' : '#b7c9d8');
+        cartoonRuns.push({ ...run, points, depth, color, isTarget });
       }
     }
-    segments.sort((a, b) => a.z - b.z);
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    for (const seg of segments) {
-      ctx.strokeStyle = seg.color;
-      ctx.globalAlpha = seg.alpha * (0.48 + seg.a.depth * 0.52);
-      ctx.lineWidth = seg.width;
-      ctx.beginPath();
-      ctx.moveTo(seg.a.x, seg.a.y);
-      ctx.lineTo(seg.b.x, seg.b.y);
-      ctx.stroke();
+    cartoonRuns.sort((a, b) => {
+      const za = a.points.reduce((s, p) => s + p.z, 0) / a.points.length;
+      const zb = b.points.reduce((s, p) => s + p.z, 0) / b.points.length;
+      return za - zb;
+    });
+    for (const run of cartoonRuns) {
+      this.drawCartoonRun(run.points, run.ss, run.color, {
+        alpha: 0.38 + run.depth * 0.62,
+        emphasis: Boolean(run.region),
+      });
     }
-    ctx.globalAlpha = 1;
 
     // Chain callouts.
     if (this.app.state.labels) {
@@ -1172,9 +1357,10 @@ export class Monitor {
     const targetChains = (real.targetChains || []).join(',') || '—';
     const binderChain = real.binderChain || '—';
     const pills = [
-      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>REAL PDB</span>',
+      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>CARTOON</span>',
       `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
       `<span class="mon-pill"><span class="pdot" style="--c:#c8ff4d"></span>VHH <b>${binderChain}</b></span>`,
+      real.ssSummary ? `<span class="mon-pill">H/S/L <b>${real.ssSummary.helix}/${real.ssSummary.sheet}/${real.ssSummary.loop}</b></span>` : '',
       Number.isFinite(ipTM) ? `<span class="mon-pill">ipTM <b>${ipTM.toFixed(0)}</b></span>` : '',
       Number.isFinite(plddt) ? `<span class="mon-pill">pLDDT <b>${plddt.toFixed(1)}</b></span>` : '',
       Number.isFinite(rmsd) ? `<span class="mon-pill">RMSD <b>${rmsd.toFixed(2)} Å</b></span>` : '',
@@ -1182,17 +1368,19 @@ export class Monitor {
     const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}`;
     if (!force && key === this._hudKey) return;
     this._hudKey = key;
-    this.kickerEl.textContent = 'RFD4 · EXECUTOR RESULT';
-    this.stageEl.textContent = `${real.designId} · ${real.binderChain || 'binder'} chain`;
+    this.kickerEl.textContent = 'RFD4 · CARTOON';
+    this.stageEl.textContent = `${real.designId} · helix / sheet / loop`;
     this.pillsEl.innerHTML = pills.join('');
     this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
     this.liveDot.classList.remove('on', 'live');
     this.emptyEl.classList.add('hidden');
     this.legendEl.innerHTML = `
-      <span class="leg" style="--c:#6f859a"><i></i>Target</span>
-      <span class="leg" style="--c:#a9bdcf"><i></i>VHH framework</span>
+      <span class="leg" style="--c:#7fa8c4"><i></i>Target helix</span>
+      <span class="leg" style="--c:#6f8ca5"><i></i>Target sheet</span>
+      <span class="leg" style="--c:#d7b06b"><i></i>VHH helix</span>
+      <span class="leg" style="--c:#b7e36a"><i></i>VHH β-sheet</span>
+      <span class="leg" style="--c:#b7c9d8"><i></i>Loop</span>
       <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
-      <span class="leg" style="--c:#c8ff4d"><i></i>CDR2</span>
       <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>`;
   }
 

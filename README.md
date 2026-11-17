@@ -16,7 +16,7 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 - **Inspector**：按模型声明自动生成参数表单，展示自动接线、诊断与结果。
 - **Render**：像导出成片一样运行整条 pipeline，逐片段产生 artifact、日志、排序候选和可导出的 FASTA/PDB/CSV。
 
-> ⚠️ **MVP 使用确定性模拟运行时。** 结构是程序化的 CA trace 示意图，指标是模拟值，全部全局标注 `SIMULATION`，导出的 PDB 也带 `SIMULATION OUTPUT` 与"不可用于实验"的 REMARK。真实模型接入点已经留好（见下文 Adapter）。
+> ⚠️ **MVP 使用确定性模拟运行时。** 结构是程序化示意，指标是模拟值，全部全局标注 `SIMULATION`，导出的 PDB 也带 `SIMULATION OUTPUT` 与"不可用于实验"的 REMARK。真实模型接入点已经留好（见下文 Adapter）。
 
 ## 技术栈
 
@@ -33,7 +33,7 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 - **Tamarind Bio 单执行器**：`rfd4-proteina` / `nanobody-design`。
 - **API key 只在服务端**：从 `.env` 读取，不进入前端 bundle，也不通过 API 返回。
 - **RFD4 闭环**：`GET /api/tamarind/jobs` → `POST /api/tamarind/import-latest` → 下载 Tamarind 结果 ZIP → 解析 `results.csv` + 8 个 PDB → 写入 SQLite → 在 UI 的 **Runs** 抽屉中展示。
-- **真实结果进监视器**：Runs 里点 **Open persisted run** 会把最佳 design 的 CA trace 载入主 Canvas（target / VHH / CDR 分色），也可以对单个 design 点 **View 3D**。
+- **真实结果进监视器**：Runs 里点 **Open persisted run** 会把最佳 design 的 secondary-structure cartoon 载入主 Canvas（helix / β-sheet / loop；target / VHH / CDR 分色），也可以对单个 design 点 **View 3D**。二级结构由 PDB 的 N/CA/C/O 骨架二面角做 DSSP-lite 判定，不是 Cα 折线。
 - **提交闭环**：`POST /api/tamarind/validate` 先校验；`POST /api/tamarind/submit` 提交真实 GPU job，后台每 15s 轮询 `/jobs`，完成后自动导入结果。
 
 ### 本地配置
@@ -57,7 +57,7 @@ npm start
 | GET | `/api/runs` / `/api/runs/:id` | 持久化 run 与设计 |
 | POST | `/api/runs/:id/sync` | 手动同步一个 Tamarind run |
 | GET | `/api/designs/:id/pdb` | 下载真实设计 PDB |
-| GET | `/api/designs/:id/structure` | 解析 CA trace / chains / CDR，供 Canvas 监视器 |
+| GET | `/api/designs/:id/structure` | 解析 secondary structure / chains / CDR，供 Canvas cartoon 监视器 |
 | GET | `/api/tamarind/jobs` | 列出账号 job + 最近设计 job |
 | POST | `/api/tamarind/import-latest` | 导入最新完成的设计 job |
 | POST | `/api/tamarind/import` | 按 jobName 导入 |
@@ -84,7 +84,7 @@ ipTM 82.0 · pLDDT 90.82 · refold RMSD 1.68 Å · passed 0/8
 
 RFD4 提交设置（target chain A、hotspots 62,63、vobarilizumab、8 designs、thinking_high、60 steps、seed 20261112）已通过 Tamarind `/validate-job` 返回 `valid: true`。验证阶段没有实际提交新 GPU job；`/submit` 路径已接好，提交后会自动轮询并导入。
 
-点 **Open persisted run** 会把 `rfd4_design_008` 的真实 CA trace 载入主监视器；在 Runs 详情里可以点单个 design 的 **View 3D** 切换。
+点 **Open persisted run** 会把 `rfd4_design_008` 的真实 secondary-structure cartoon（helix / β-sheet / loop）载入主监视器；在 Runs 详情里可以点单个 design 的 **View 3D** 切换。
 
 
 
@@ -142,7 +142,7 @@ node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启�
 | --- |
 | ![backend](shots/06-backend.png) |
 
-| 真实 RFD4 design · CA trace 进入主监视器 |
+| 真实 RFD4 design · helix / β-sheet / loop cartoon 进入主监视器 |
 | --- |
 | ![real design](shots/07-real-design.png) |
 
@@ -210,7 +210,7 @@ vhh-studio/
 │  ├─ api.js                  # REST routes
 │  ├─ db.js                   # node:sqlite schema / repositories
 │  ├─ tamarind.js             # API client + result ZIP/CSV/PDB parsing
-│  ├─ pdb.js                  # CA trace / chain / CDR parser for the monitor
+│  ├─ pdb.js                  # backbone SS assignment + chain/CDR parser
 │  ├─ runner.js               # RFD4 submit / poll / import
 │  └─ config.js               # .env / data dir
 ├─ data/                      # SQLite runtime data（gitignored）
@@ -309,13 +309,13 @@ interface Adapter {
 
 ## MVP 边界
 
-**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、3 套模板、确定性模拟引擎、15 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + 真实 CA trace 监视器**。
+**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、3 套模板、确定性模拟引擎、15 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + 真实 secondary-structure cartoon 监视器**。
 
-**未实现**：RFD4 结果的全原子/侧链渲染（当前为 CA trace）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
+**未实现**：RFD4 结果的全原子/侧链渲染（当前为 cartoon：helix / β-sheet / loop）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
 
 ## 路线图
 
-- **v0.3** 持久化后端 + Tamarind RFD4 单执行器 + 真实 CA trace 监视器（已落地）
+- **v0.3** 持久化后端 + Tamarind RFD4 单执行器 + secondary-structure cartoon 监视器（已落地）
 - **v0.4** 全原子/侧链渲染、结果版本对比、Compound Clip
 - **v0.5** 并行轨道 / A-B 对照、更多 Tamarind 模型、作业取消
 - **v1.0** 3D 表面刷选表位、CDR 锁定、湿实验反馈闭环、团队资源库
