@@ -29,7 +29,7 @@ async function readJson(req, limit = 2 * 1024 * 1024) {
   }
 }
 
-export function createApi({ store, tamarind, manager, version = '0.3.0' }) {
+export function createApi({ store, tamarind, localRfd4, manager, version = '0.3.0' }) {
   return async function handleApi(req, res, url) {
     const path = url.pathname;
     if (!path.startsWith('/api/')) return false;
@@ -46,6 +46,11 @@ export function createApi({ store, tamarind, manager, version = '0.3.0' }) {
           tamarind: {
             configured: tamarind.configured,
             baseUrl: tamarind.baseUrl,
+          },
+          localRfd4: {
+            configured: Boolean(localRfd4?.configured),
+            distro: localRfd4?.config?.distro || null,
+            repo: localRfd4?.config?.repo || null,
           },
         });
         return true;
@@ -129,6 +134,35 @@ export function createApi({ store, tamarind, manager, version = '0.3.0' }) {
         sendText(res, 200, design.pdb, 'chemical/x-pdb; charset=utf-8', {
           'content-disposition': `attachment; filename="${design.designId || 'design'}.pdb"`,
         });
+        return true;
+      }
+
+      if (req.method === 'GET' && path === '/api/local/rfd4/status') {
+        sendJson(res, 200, await manager.localRfd4Status());
+        return true;
+      }
+
+      if (req.method === 'POST' && path === '/api/local/rfd4/run') {
+        const body = await readJson(req);
+        const result = await manager.submitLocalRfd4({
+          specPath: typeof body.specPath === 'string' ? body.specPath : undefined,
+          numDesigns: Math.min(8, Math.max(1, Number(body.numDesigns) || 1)),
+          name: typeof body.name === 'string' ? body.name : undefined,
+          configPath: typeof body.configPath === 'string' ? body.configPath : undefined,
+          configName: typeof body.configName === 'string' ? body.configName : undefined,
+          targetChains: Array.isArray(body.targetChains) ? body.targetChains.map(String) : ['A'],
+          seed: Number(body.seed) || 20261112,
+          compile: Boolean(body.compile),
+        });
+        sendJson(res, 202, result);
+        return true;
+      }
+
+      const localLogMatch = path.match(/^\/api\/local\/rfd4\/runs\/([^/]+)\/log$/);
+      if (localLogMatch && req.method === 'GET') {
+        const log = await localRfd4?.getRunLog(decodeURIComponent(localLogMatch[1]));
+        if (log == null) return sendJson(res, 404, { error: 'Local run log not found' }), true;
+        sendText(res, 200, log);
         return true;
       }
 

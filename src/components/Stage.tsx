@@ -64,7 +64,7 @@ export function Stage({ app }: { app: any }) {
         {real && (
           <button className="ll-real-chip" onClick={() => app.clearRealDesign()} title="Return to the simulated preview">
             <span className="ll-real-dot" />
-            RFD4 · {real.designId}
+            <span className="ll-real-name">{real.designId}</span>
             <span className="ll-real-x">×</span>
           </button>
         )}

@@ -183,6 +183,25 @@ body,
   font-family: var(--mono);
   font-size: 7.5px;
   letter-spacing: .3px;
+  max-width: 260px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.ll-real-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-bar .view-tabs,
+.stage-bar .stage-tools {
+  flex-shrink: 0;
+}
+
+.stage-bar .stage-meta {
+  flex-shrink: 0;
 }
 
 .ll-real-chip:hover {
@@ -825,6 +844,29 @@ body,
   border-radius: 5px;
   background: #090e14;
   border: 1px solid var(--line-soft);
+}
+
+.bd-local-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 7px;
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  color: var(--muted);
+  background: #090e14;
+  border: 1px solid var(--line-soft);
+}
+
+.bd-local-status.ok .bd-led {
+  background: var(--green);
+  box-shadow: 0 0 7px rgba(110, 231, 168, .7);
+}
+
+.bd-local-status.off {
+  color: var(--dim);
 }
 
 .bd-run-summary span {

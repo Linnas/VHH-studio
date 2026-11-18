@@ -35,6 +35,10 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
   const [jobsData, setJobsData] = useState<JobsResponse | null>(null);
   const [runs, setRuns] = useState<BackendRun[]>([]);
   const [run, setRun] = useState<BackendRun | null>(null);
+  const [localInfo, setLocalInfo] = useState<any>(null);
+  const [localSpec, setLocalSpec] = useState('');
+  const [localChain, setLocalChain] = useState('A');
+  const [localDesigns, setLocalDesigns] = useState(1);
   const selectedRunRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState('');
@@ -57,12 +61,15 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
     setLoading(true);
     setError('');
     try {
-      const [remote, local] = await Promise.all([
+      const [remote, local, localStatus] = await Promise.all([
         api<JobsResponse>(`/api/tamarind/jobs?limit=100${force ? '&refresh=1' : ''}`),
         api<{ runs: BackendRun[] }>('/api/runs?limit=50'),
+        api<any>('/api/local/rfd4/status').catch(() => null),
       ]);
       setJobsData(remote);
       setRuns(local.runs);
+      setLocalInfo(localStatus);
+      if (localStatus?.defaultSpec) setLocalSpec((prev) => prev || localStatus.defaultSpec);
       if (remote.defaults) {
         setForm((prev) => ({
           ...prev,
@@ -76,10 +83,12 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
           seed: remote.defaults.seed || prev.seed,
         }));
       }
-      const target = remote.latestDesignJob && remote.imported.find((i) => i.jobName === remote.latestDesignJob?.jobName);
       if ((selectLatest || !selectedRunRef.current) && local.runs.length) {
-        const id = target?.runId || local.runs[0].id;
+        const id = local.runs[0].id;
         await selectRun(id);
+      } else if (selectedRunRef.current) {
+        const detail = await api<BackendRun>(`/api/runs/${encodeURIComponent(selectedRunRef.current)}`).catch(() => null);
+        if (detail) setRun(detail);
       }
     } catch (err: any) {
       setError(err.message || String(err));
@@ -144,8 +153,30 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
     if (best) await viewDesign(best);
   };
 
-  const importLatest = async () => {
-    setBusy('import');
+  const runLocal = async () => {
+    setBusy('local');
+    setError('');
+    setNotice('');
+    try {
+      const result = await api<any>('/api/local/rfd4/run', {
+        method: 'POST',
+        body: {
+          specPath: localSpec,
+          numDesigns: Number(localDesigns) || 1,
+          targetChains: [localChain],
+        },
+      });
+      setNotice(`Local RFD4 started: ${result.run?.jobName || 'job'}. WSL is generating; this can take several minutes.`);
+      await refresh(true);
+      if (result.run?.id) await selectRun(result.run.id);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const importLatest = async () => {    setBusy('import');
     setError('');
     setNotice('');
     try {
@@ -388,6 +419,40 @@ export function BackendDrawer({ app, open, onClose }: { app: any; open: boolean;
               )}
             </section>
           )}
+
+          <section className="bd-section">
+            <div className="bd-section-head"><h3>Local RFD4 · WSL</h3><span>{localInfo?.available ? `${localInfo.gpu || 'GPU'} · ${localInfo.memory || ''}` : 'WSL unavailable'}</span></div>
+            <div className="bd-form">
+              <div className={`bd-local-status ${localInfo?.available ? 'ok' : 'off'}`}>
+                <span className="bd-led" />
+                {localInfo?.available ? `RFD4 ready · ${localInfo.distro}` : localInfo?.error || 'Start Ubuntu WSL with the RFD4 venv to enable local runs.'}
+              </div>
+              <TextInput
+                label="Design spec path (CIF / YAML, WSL path)"
+                size="sm"
+                value={localSpec}
+                onChange={setLocalSpec}
+                containerClassName="ll-field-astryx"
+              />
+              <div className="bd-form-grid">
+                <TextInput label="Target chain" size="sm" value={localChain} onChange={setLocalChain} containerClassName="ll-field-astryx" />
+                <TextInput label="Designs" size="sm" value={String(localDesigns)} onChange={(v) => setLocalDesigns(Number(v) || 1)} inputMode="numeric" containerClassName="ll-field-astryx" />
+              </div>
+              <div className="bd-actions">
+                <Button
+                  label="Run local RFD4"
+                  variant="primary"
+                  size="sm"
+                  icon={<Glyph name="play" size={12} />}
+                  onClick={runLocal}
+                  isLoading={busy === 'local'}
+                  isDisabled={!localInfo?.available || !localSpec}
+                  className="ll-astryx-button"
+                />
+              </div>
+              <p className="bd-note">Runs <code>rfd4-generate</code> inside WSL with the local 5060 Ti, converts output CIF to PDB, and imports the designs into SQLite/Runs. No Tamarind credits are used.</p>
+            </div>
+          </section>
 
           <section className="bd-section">
             <div className="bd-section-head"><h3>Submit RFD4-Proteina</h3><span>real GPU job</span></div>

@@ -59,11 +59,50 @@ npm start
 | POST | `/api/runs/:id/sync` | 手动同步一个 Tamarind run |
 | GET | `/api/designs/:id/pdb` | 下载真实设计 PDB |
 | GET | `/api/designs/:id/structure` | 解析 all atoms / bonds / secondary structure / chains / CDR，供 Carbon 与 Stick 两种表示 |
+| GET | `/api/local/rfd4/status` | WSL / venv / GPU 状态 |
+| POST | `/api/local/rfd4/run` | 提交本地 RFD4-Proteina（WSL） |
+| GET | `/api/local/rfd4/runs/:id/log` | 本地 run 的 `job.log` |
 | GET | `/api/tamarind/jobs` | 列出账号 job + 最近设计 job |
 | POST | `/api/tamarind/import-latest` | 导入最新完成的设计 job |
 | POST | `/api/tamarind/import` | 按 jobName 导入 |
 | POST | `/api/tamarind/validate` | 无成本校验 RFD4 settings |
 | POST | `/api/tamarind/submit` | 提交 RFD4 并开始轮询 |
+
+### 本地 RFD4 executor（WSL2）
+
+当前后端还支持不走 Tamarind 的本地 RFD4-Proteina executor：
+
+- WSL2 Ubuntu 24.04 + CUDA 13 + RTX 5060 Ti 16GB
+- 通过 `wsl.exe` 启动 `rfd4-generate`
+- RFD4 输出的 CIF 用 `gemmi` 转成 PDB，再进入现有 Runs / structure API / 3Dmol
+- Stage → Runs → **Local RFD4 · WSL** 可直接提交
+- 需要设置 `.env`：`LOCAL_RFD4_REPO`、`LOCAL_RFD4_VENV`、`LOCAL_RFD4_DISTRO`
+- API：`GET /api/local/rfd4/status`、`POST /api/local/rfd4/run`
+
+#### 实测 smoke test
+
+```text
+GPU:         RTX 5060 Ti 16GB (16311 MiB, driver 610.88)
+WSL:         Ubuntu 24.04
+Model:       rfd4-proteina 0.0.3
+Torch:       2.14.1+cu130
+Input:       pmvk_3CH4__VHH_vobarilizumab_cdr123.cif.zst
+Output:      1 VHH design
+Duration:    77.5 s（权重已缓存；不含首次 1.7GB 下载）
+Peak VRAM:   4401 MiB
+Chains:      target A 128 aa / binder H 121 aa
+```
+
+首次运行在没有 C 编译器时，`torch.compile` 会报 Triton `Failed to find C compiler`。本地 executor 默认设置：
+
+```bash
+TORCHDYNAMO_DISABLE=1
+TORCH_COMPILE_DISABLE=1
+```
+
+因此走 eager 路径，能稳定生成；代价是比编译路径慢一些。权重首次下载约 1.7GB，环境约 7GB。
+
+本地结果会出现在 Runs 中，`source=local-submit`，CIF 已转 PDB，可直接 `View 3D` 或用 3Dmol 打开。
 
 ### 已核对的最新测试 job
 
@@ -314,7 +353,7 @@ interface Adapter {
 
 ## MVP 边界
 
-**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、2 套用户模板、确定性模拟引擎、16 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + 3Dmol.js cartoon / side-chain sticks + 默认加载最新 persisted run**。
+**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、2 套用户模板、确定性模拟引擎、16 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + 本地 WSL RFD4-Proteina executor + 3Dmol.js cartoon/sticks + 默认加载最新 persisted run**。
 
 **未实现**：explicit-H / 全原子力场模型（3Dmol 当前为 Carbon cartoon / Stick 两种表示）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
 

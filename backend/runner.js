@@ -39,9 +39,10 @@ export function defaultRfd4Settings(job = null, overrides = {}) {
 }
 
 export class RunManager {
-  constructor({ store, tamarind, pollMs = 15000, logger = console }) {
+  constructor({ store, tamarind, localRfd4 = null, pollMs = 15000, logger = console }) {
     this.store = store;
     this.tamarind = tamarind;
+    this.localRfd4 = localRfd4;
     this.pollMs = pollMs;
     this.logger = logger;
     this.timer = null;
@@ -159,9 +160,18 @@ export class RunManager {
     return normalized;
   }
 
+  async submitLocalRfd4(options) {
+    if (!this.localRfd4) throw new Error('Local RFD4 executor is not configured');
+    return this.localRfd4.submit(options);
+  }
+
+  async localRfd4Status() {
+    if (!this.localRfd4) return { configured: false, available: false };
+    return this.localRfd4.probe();
+  }
+
   async submitRfd4(settings, requestedName) {
-    if (!this.tamarind.configured) throw new Error('TAMARIND_API_KEY is not configured');
-    const safe = sanitizeRfd4Settings(settings);
+    if (!this.tamarind.configured) throw new Error('TAMARIND_API_KEY is not configured');    const safe = sanitizeRfd4Settings(settings);
     const validation = await this.tamarind.validate('rfd4-proteina', safe);
     if (!validation.valid) {
       return { submitted: false, validation };

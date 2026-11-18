@@ -314,3 +314,14 @@ Created 2026-11-12 05:52:04 · 8 designs
 - API 不返回 key；Tamarind 请求只在 Node 进程内发。
 - 服务默认绑定 `127.0.0.1`；提交按钮要求显式“real job”确认，避免误触 GPU 花费。
 
+### 9.6 本地 RFD4 executor
+
+- `backend/local-rfd4.js` 通过 `wsl.exe -d <distro>` 调 `rfd4-generate`。
+- 输入是 CIF / YAML design spec；输出 `*.cif` 由 `gemmi` 转 PDB，再复用现有 `parseCaTrace` → SQLite → structure API → 3Dmol。
+- `GET /api/local/rfd4/status` 返回 WSL / GPU / venv 状态。
+- `POST /api/local/rfd4/run` 创建 `local-rfd4` run；进程完成后自动导入 designs。
+- Runs 抽屉的 **Local RFD4 · WSL** 区块可直接提交；失败时看 `data/local-runs/<job>/job.log`。
+- 5060 Ti 16GB smoke：VHH 1 design，77.5s，峰值 4401 MiB；首次权重 1.7GB，环境 7GB。
+- 无 C 编译器时 torch.compile/Triton 会失败；executor 固定 `TORCHDYNAMO_DISABLE=1` + `TORCH_COMPILE_DISABLE=1` 走 eager。
+- 与 Tamarind 的区别：本地模型是开源 RFD4-Proteina；Tamarind 的 antibody checkpoint / pre-oracle / refold 预置不保证逐位一致。
+

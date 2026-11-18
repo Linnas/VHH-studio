@@ -368,7 +368,7 @@ kbd {
 .live-dot.on { background: var(--accent); box-shadow: 0 0 9px rgba(200, 255, 77, .8); }
 .live-dot.live { background: var(--amber); box-shadow: 0 0 9px rgba(255, 180, 84, .8); animation: pulse 1.4s ease-in-out infinite; }
 .monitor-kicker { font-family: var(--mono); font-size: 7.5px; letter-spacing: 1.8px; color: var(--dim); }
-.monitor-stage { font-size: 12px; font-weight: 600; margin-top: 2px; letter-spacing: .1px; }
+.monitor-stage { font-size: 12px; font-weight: 600; margin-top: 2px; letter-spacing: .1px; max-width: min(620px, 55vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .monitor-pills { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .mon-pill {
   display: flex; align-items: center; gap: 4px;

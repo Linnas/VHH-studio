@@ -5,6 +5,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { config } from './backend/config.js';
 import { Store } from './backend/db.js';
 import { TamarindClient } from './backend/tamarind.js';
+import { LocalRFD4 } from './backend/local-rfd4.js';
 import { RunManager } from './backend/runner.js';
 import { createApi } from './backend/api.js';
 
@@ -30,9 +31,11 @@ const MIME = {
 
 const store = new Store(config.dbPath);
 const tamarind = new TamarindClient(config.tamarind);
-const manager = new RunManager({ store, tamarind, pollMs: config.pollMs });
-const handleApi = createApi({ store, tamarind, manager, version: '0.3.0' });
+const localRfd4 = new LocalRFD4({ config: config.localRfd4, store });
+const manager = new RunManager({ store, tamarind, localRfd4, pollMs: config.pollMs });
+const handleApi = createApi({ store, tamarind, localRfd4, manager, version: '0.3.0' });
 manager.start();
+localRfd4.recoverInterrupted().catch((error) => console.warn('Local RFD4 recovery failed:', error.message));
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || `${config.host}:${config.port}`}`);
@@ -77,6 +80,7 @@ server.listen(config.port, config.host, () => {
   console.log(`  React 19 + Astryx · serving ${SERVE_ROOT === DIST ? 'dist/' : 'source (build recommended)'}`);
   console.log(`  SQLite · ${config.dbPath}`);
   console.log(`  Tamarind · ${tamarind.configured ? 'configured (RFD4 executor ready)' : 'not configured'}`);
+  console.log(`  Local RFD4 · ${localRfd4.configured ? `enabled (${config.localRfd4.distro})` : 'disabled'}`);
   console.log(`  http://${config.host}:${config.port}\n`);
 });
 
