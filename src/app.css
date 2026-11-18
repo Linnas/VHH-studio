@@ -460,6 +460,11 @@ body,
   height: 30px;
 }
 
+.ll-root .ll-stick-toggle {
+  height: 28px;
+  min-width: 66px;
+}
+
 .backend-scrim {
   position: fixed;
   inset: 0;

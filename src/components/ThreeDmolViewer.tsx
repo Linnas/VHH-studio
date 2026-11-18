@@ -31,10 +31,13 @@ function applyLabels(viewer: any, structure: any, show: boolean) {
   }
 }
 
-function applyStyle(viewer: any, structure: any, sticks: boolean) {
+function applyStyle(viewer: any, structure: any, mode: 'carbon' | 'stick') {
   viewer.setStyle({}, {});
   const chains = structure.chains || [];
   const binder = chains.find((c: any) => c.role === 'binder');
+  const sideStyle = mode === 'stick'
+    ? { stick: { radius: 0.13, colorscheme: 'Jmol' } }
+    : { line: { linewidth: 1.6, colorscheme: 'Jmol' } };
 
   for (const chain of chains) {
     const base = chain.role === 'target' ? '#7fa8c4' : '#b7e36a';
@@ -51,14 +54,13 @@ function applyStyle(viewer: any, structure: any, sticks: boolean) {
       });
     }
 
-    if (!sticks) continue;
     if (chain.role === 'target' && binder) {
       viewer.addStyle({
         chain: chain.id,
         within: { distance: 8, sel: { chain: binder.id } },
-      }, { stick: { radius: 0.13, colorscheme: 'Jmol' } });
+      }, sideStyle);
     } else {
-      viewer.addStyle({ chain: chain.id }, { stick: { radius: 0.11, colorscheme: 'Jmol' } });
+      viewer.addStyle({ chain: chain.id }, sideStyle);
     }
   }
 }
@@ -95,7 +97,7 @@ export function ThreeDmolViewer({
         host.innerHTML = '';
         const viewer = createViewer(host, { backgroundColor: '#070b10', antialias: true });
         viewer.addModel(pdb, 'pdb');
-        applyStyle(viewer, structure, app.state.sticks);
+        applyStyle(viewer, structure, app.state.stickMode);
         applyLabels(viewer, structure, app.state.labels);
         viewer.zoomTo();
         viewer.zoom(1.16);
@@ -133,10 +135,10 @@ export function ThreeDmolViewer({
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-    applyStyle(viewer, structure, app.state.sticks);
+    applyStyle(viewer, structure, app.state.stickMode);
     applyLabels(viewer, structure, app.state.labels);
     viewer.render();
-  }, [app.state.sticks, app.state.labels, structure]);
+  }, [app.state.stickMode, app.state.labels, structure]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

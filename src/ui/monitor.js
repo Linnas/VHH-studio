@@ -1220,7 +1220,7 @@ export class Monitor {
     ctx.restore();
   }
   drawSidechainSticks(chains, project) {
-    if (!this.app.state.sticks) return;
+    const mode = this.app.state.stickMode || (this.app.state.sticks ? 'stick' : 'carbon');
     const ctx = this.ctx;
     const backboneNames = new Set(['N', 'CA', 'C', 'O']);
     const binderCAs = [];
@@ -1262,7 +1262,7 @@ export class Monitor {
             : (isTarget ? '#9db1c4' : '#d7e2ee');
           sticks.push({
             a: pa, b: pb, color,
-            alpha: 0.44 + ((pa.depth + pb.depth) / 2) * 0.56,
+            alpha: (mode === 'stick' ? 0.44 : 0.3) + ((pa.depth + pb.depth) / 2) * (mode === 'stick' ? 0.56 : 0.5),
             z: (pa.z + pb.z) / 2,
             atom: element,
           });
@@ -1274,7 +1274,7 @@ export class Monitor {
     ctx.lineCap = 'round';
     for (const stick of sticks) {
       ctx.strokeStyle = rgba(stick.color, stick.alpha);
-      ctx.lineWidth = 1.35;
+      ctx.lineWidth = mode === 'stick' ? 1.35 : 0.9;
       ctx.beginPath();
       ctx.moveTo(stick.a.x, stick.a.y);
       ctx.lineTo(stick.b.x, stick.b.y);
@@ -1434,16 +1434,16 @@ export class Monitor {
       `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
       `<span class="mon-pill"><span class="pdot" style="--c:#b7e36a"></span>VHH <b>${binderChain}</b></span>`,
       real.ssSummary ? `<span class="mon-pill">H/S/L <b>${real.ssSummary.helix}/${real.ssSummary.sheet}/${real.ssSummary.loop}</b></span>` : '',
-      `<span class="mon-pill">STICKS <b>${this.app.state.sticks ? 'ON' : 'OFF'}</b></span>`,
+      `<span class="mon-pill">SIDECHAIN <b>${this.app.state.stickMode === 'carbon' ? 'CARBON' : 'STICK'}</b></span>`,
       Number.isFinite(ipTM) ? `<span class="mon-pill">ipTM <b>${ipTM.toFixed(0)}</b></span>` : '',
       Number.isFinite(plddt) ? `<span class="mon-pill">pLDDT <b>${plddt.toFixed(1)}</b></span>` : '',
       Number.isFinite(rmsd) ? `<span class="mon-pill">RMSD <b>${rmsd.toFixed(2)} Å</b></span>` : '',
     ].filter(Boolean);
-    const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}|${this.app.state.sticks}`;
+    const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}|${this.app.state.stickMode}`;
     if (!force && key === this._hudKey) return;
     this._hudKey = key;
     this.kickerEl.textContent = 'RFD4 · 3DMOL';
-    this.stageEl.textContent = `${real.designId} · cartoon${this.app.state.sticks ? ' + sticks' : ''}`;
+    this.stageEl.textContent = `${real.designId} · cartoon + ${this.app.state.stickMode === 'carbon' ? 'carbon' : 'stick'}`;
     this.pillsEl.innerHTML = pills.join('');
     this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
     this.liveDot.classList.remove('on', 'live');

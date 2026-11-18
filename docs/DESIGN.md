@@ -235,7 +235,7 @@ main.tsx
 - **时间线编辑器**：拖入、跨轨移动、右缘裁剪、吸附、缩放、scrub、删除、复制、撤销重做、同轨避让。
 - **编译器**：按开始时间自动接线，缺输入 / 上游未完成 / 同轨重叠 / 越界均有诊断。
 - **运行时**：播放头驱动的 artifact 计算，缓存失效，逐片段日志，2× Render，完成自动切 Results。
-- **监视器**：持久化 RFD4 design 的 3D Preview 由 **3Dmol.js 2.5 / WebGL** 渲染（cartoon + side-chain sticks + CDR 分色 + 链标签）；模拟时间线与没有 persisted run 时使用 Canvas 2D fallback（抗原表面点云 + 表位 + β-sandwich VHH + CDR 环 + 接触线 + diffusion 粒子）。Flow Map（带自动接线边）与 Sequence（残基着色 + CDR 注释 + 三张 dossier 卡）仍是 Canvas。
+- **监视器**：持久化 RFD4 design 的 3D Preview 由 **3Dmol.js 2.5 / WebGL** 渲染（cartoon + side-chain Carbon/Stick 切换 + CDR 分色 + 链标签）；模拟时间线与没有 persisted run 时使用 Canvas 2D fallback（抗原表面点云 + 表位 + β-sandwich VHH + CDR 环 + 接触线 + diffusion 粒子）。Flow Map（带自动接线边）与 Sequence（残基着色 + CDR 注释 + 三张 dossier 卡）仍是 Canvas。
 - **资源**：11 个模型 / 工具、6 条轨道、2 套模板（PD-L1、HER2）；EGFR-D3 只保留为内部测试 fixture。
 - **交付**：项目 JSON、FASTA、PDB（CA trace + REMARK）、metrics CSV。
 - **验证**：16 个引擎 / 后端测试；`tools/cdp.mjs` 提供 headless Chrome 截图与交互 smoke test。

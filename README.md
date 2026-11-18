@@ -22,7 +22,7 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 
 - **React 19 + TypeScript + Vite 8**：前端组件化与构建。
 - **Astryx 0.7（Meta 开源设计系统，Beta）**：`@astryxdesign/core` + `@astryxdesign/theme-neutral`。按钮、图标按钮、Tabs、Slider、Switch、TextInput、Badge、Tooltip 都来自 Astryx；自定义 Loopline dark theme 通过 `defineTheme()` 把 Astryx token 对齐到时间线的酸橙 / 深色调色板。
-- **3Dmol.js 2.5（WebGL）**：真实 RFD4 design 的 3D Preview 使用内置 3Dmol viewer，cartoon + side-chain sticks、CDR 分色、旋转/缩放/自转。
+- **3Dmol.js 2.5（WebGL）**：真实 RFD4 design 的 3D Preview 使用内置 3Dmol viewer，cartoon + side-chain **Carbon / Stick** 切换、CDR 分色、旋转/缩放/自转。
 - **Canvas 2D**：Flow Map、Sequence，以及没有 persisted run 时的模拟 3D fallback 仍由命令式 Canvas 渲染，React 托管生命周期。
 - **纯 JS engine**：编译器、运行时、几何、序列与导出器保持与 UI 无关，便于测试和接真实 GPU。
 
@@ -85,7 +85,7 @@ ipTM 82.0 · pLDDT 90.82 · refold RMSD 1.68 Å · passed 0/8
 
 RFD4 提交设置（target chain A、hotspots 62,63、vobarilizumab、8 designs、thinking_high、60 steps、seed 20261112）已通过 Tamarind `/validate-job` 返回 `valid: true`。验证阶段没有实际提交新 GPU job；`/submit` 路径已接好，提交后会自动轮询并导入。
 
-点 **Open persisted run** 会加载 `rfd4_design_008`，主 3D Preview 由 3Dmol.js 显示 cartoon + side-chain sticks；Stage 栏的 atom 按钮开关 sticks，eye 开关链标签。
+点 **Open persisted run** 会加载 `rfd4_design_008`，主 3D Preview 由 3Dmol.js 显示 cartoon + side-chain；Stage 栏的 **Stick / Carbon** 按钮切换侧链表示，eye 开关链标签。
 
 
 
@@ -146,6 +146,10 @@ node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启�
 | 真实 RFD4 design · 3Dmol.js cartoon + all-atom side-chain sticks |
 | --- |
 | ![real design](shots/08-ribbon-sticks.png) |
+
+| Side-chain Carbon 表示（同一 toggle 的另一档） |
+| --- |
+| ![carbon](shots/09-carbon.png) |
 
 > 建议使用 Chrome / Edge 120+；界面用到 `color-mix()`、`backdrop-filter`、`ResizeObserver`。
 

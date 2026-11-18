@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
+import { Button } from '@astryxdesign/core/Button';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Monitor } from '../ui/monitor.js';
 import { ThreeDmolViewer } from './ThreeDmolViewer';
@@ -89,15 +90,15 @@ export function Stage({ app }: { app: any }) {
             tooltip="Toggle labels"
             className="ll-astryx-icon"
           />
-          <IconButton
-            label="Toggle side-chain sticks"
-            icon={<Glyph name="atom" size={13} />}
-            variant={app.state.sticks ? 'secondary' : 'ghost'}
+          <Button
+            label={app.state.stickMode === 'stick' ? 'Stick' : 'Carbon'}
+            variant={app.state.stickMode === 'stick' ? 'secondary' : 'ghost'}
             size="sm"
+            icon={<Glyph name="atom" size={13} />}
             isDisabled={!real || view !== '3d'}
             onClick={() => app.toggleSticks()}
-            tooltip={app.state.sticks ? 'Hide side-chain sticks' : 'Show side-chain sticks'}
-            className="ll-astryx-icon"
+            tooltip={`Side-chain representation: ${app.state.stickMode}. Click to switch to ${app.state.stickMode === 'stick' ? 'carbon' : 'stick'}.`}
+            className="ll-astryx-button ll-stick-toggle"
           />
           <IconButton
             label="Reset camera"

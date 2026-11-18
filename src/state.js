@@ -63,6 +63,7 @@ export class App {
       spin: Boolean(ui.spin),
       labels: ui.labels !== false,
       sticks: ui.sticks !== false,
+      stickMode: ui.stickMode === 'carbon' ? 'carbon' : (ui.sticks === false ? 'carbon' : 'stick'),
       realDesign: null,
       molActive: false,
     };
@@ -713,7 +714,8 @@ export class App {
   }
 
   toggleSticks() {
-    this.state.sticks = !this.state.sticks;
+    this.state.stickMode = this.state.stickMode === 'stick' ? 'carbon' : 'stick';
+    this.state.sticks = this.state.stickMode === 'stick';
     this.saveSoon();
     this.emit('sticks');
   }
