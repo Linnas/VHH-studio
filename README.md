@@ -121,7 +121,7 @@ npm test                  # 引擎 / 后端 / 导出器 16 个测试
 node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启动 4173
 ```
 
-首次打开不再载入 EGFR-D3 demo 时间线：时间线为空，自动加载后端最新的 persisted RFD4 run（当前是 `rfd4_design_008`）。没有 persisted run 时显示空监视器；拖入模型可重新构建 pipeline。
+首次打开不再载入 EGFR-D3 demo 时间线：时间线为空，自动加载后端最新的 persisted RFD4 run（当前是 `rfd4_design_008`）。没有 persisted run 时 3D Preview 保持空白，只显示空状态提示，不再绘制装饰性抗原点云；拖入模型可重新构建 pipeline。
 
 > Astryx 目前是 Beta；本项目锁定 `@astryxdesign/core@0.7.16`。Astryx 的安装脚本可能被 npm 的 allowScripts 策略拦截，但预编译 CSS/JS 仍可正常构建与运行。
 

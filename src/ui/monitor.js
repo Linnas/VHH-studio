@@ -220,6 +220,9 @@ export class Monitor {
     const structure = preview.structure;
     const active = preview.activeNode;
     const diffusing = active?.model?.kind === 'backbone';
+    // No backbone means no structure yet: keep the 3D canvas empty instead of
+    // drawing a decorative antigen point cloud.
+    if (!preview.hasBackbone && !diffusing) return;
     const showVHH = preview.hasBackbone || diffusing;
     const alphaVHH = preview.hasBackbone ? 1 : diffusing ? 0.18 + preview.progress * 0.82 : 0;
 
@@ -1469,8 +1472,23 @@ export class Monitor {
     const active = preview.activeNode;
     const has = preview.hasBackbone;
     const diffusing = active?.model?.kind === 'backbone';
-    const kicker = this.app.state.rendering ? 'RENDERING' : this.app.state.playing ? 'LIVE' : has ? 'CACHED' : diffusing ? 'GENERATING' : 'STANDBY';
     const design = preview.designs[this.app.state.selectedCandidate] || preview.designs[0];
+    const blank = this.app.state.view === '3d' && !has && !diffusing && !design;
+    if (blank) {
+      const key = `blank|${this.app.state.view}|${this.app.state.playhead.toFixed(2)}`;
+      if (force || key !== this._hudKey) {
+        this._hudKey = key;
+        this.kickerEl.textContent = 'STANDBY';
+        this.stageEl.textContent = 'No structure loaded';
+        this.pillsEl.innerHTML = '<span class="mon-pill sim"><span class="pdot" style="--c:#ffb454"></span>SIMULATION</span>';
+        this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
+        this.liveDot.classList.remove('on', 'live');
+        this.emptyEl.classList.remove('hidden');
+        this.legendEl.innerHTML = '';
+      }
+      return;
+    }
+    const kicker = this.app.state.rendering ? 'RENDERING' : this.app.state.playing ? 'LIVE' : has ? 'CACHED' : diffusing ? 'GENERATING' : 'STANDBY';
     const pills = [];
     pills.push('<span class="mon-pill sim"><span class="pdot" style="--c:#ffb454"></span>SIMULATION</span>');
     if (has) {
