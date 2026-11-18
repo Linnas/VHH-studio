@@ -205,6 +205,7 @@ export class Monitor {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
     const view = this.app.state.view;
+    if (view === '3d' && this.app.state.realDesign && this.app.state.molActive) return;
     if (view === 'flow') this.drawFlow();
     else if (view === 'sequence') this.drawSequence();
     else if (this.app.state.realDesign) this.drawReal3D();
@@ -1429,7 +1430,7 @@ export class Monitor {
     const targetChains = (real.targetChains || []).join(',') || '—';
     const binderChain = real.binderChain || '—';
     const pills = [
-      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>RIBBON</span>',
+      '<span class="mon-pill real"><span class="pdot" style="--c:#6ee7a8"></span>3DMOL</span>',
       `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
       `<span class="mon-pill"><span class="pdot" style="--c:#b7e36a"></span>VHH <b>${binderChain}</b></span>`,
       real.ssSummary ? `<span class="mon-pill">H/S/L <b>${real.ssSummary.helix}/${real.ssSummary.sheet}/${real.ssSummary.loop}</b></span>` : '',
@@ -1441,20 +1442,21 @@ export class Monitor {
     const key = `real|${real.designId}|${real.jobName}|${pills.join('')}|${this.app.state.view}|${this.app.state.sticks}`;
     if (!force && key === this._hudKey) return;
     this._hudKey = key;
-    this.kickerEl.textContent = 'RFD4 · RIBBON + STICKS';
-    this.stageEl.textContent = `${real.designId} · all-atom side chains`;
+    this.kickerEl.textContent = 'RFD4 · 3DMOL';
+    this.stageEl.textContent = `${real.designId} · cartoon${this.app.state.sticks ? ' + sticks' : ''}`;
     this.pillsEl.innerHTML = pills.join('');
     this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
     this.liveDot.classList.remove('on', 'live');
     this.emptyEl.classList.add('hidden');
     this.legendEl.innerHTML = `
-      <span class="leg" style="--c:#7fa8c4"><i></i>Target helix</span>
-      <span class="leg" style="--c:#6f8ca5"><i></i>Target sheet</span>
-      <span class="leg" style="--c:#b7e36a"><i></i>VHH β-sheet</span>
+      <span class="leg" style="--c:#7fa8c4"><i></i>Target</span>
+      <span class="leg" style="--c:#b7e36a"><i></i>VHH</span>
+      <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
+      <span class="leg" style="--c:#ffb454"><i></i>CDR2</span>
+      <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>
       <span class="leg" style="--c:#6cb6ff"><i></i>N</span>
       <span class="leg" style="--c:#ff7b72"><i></i>O</span>
-      <span class="leg" style="--c:#e5c07b"><i></i>S</span>
-      <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>`;
+      <span class="leg" style="--c:#e5c07b"><i></i>S</span>`;
   }
 
   /* ================================= HUD ================================== */

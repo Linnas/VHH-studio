@@ -22,7 +22,8 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 
 - **React 19 + TypeScript + Vite 8**：前端组件化与构建。
 - **Astryx 0.7（Meta 开源设计系统，Beta）**：`@astryxdesign/core` + `@astryxdesign/theme-neutral`。按钮、图标按钮、Tabs、Slider、Switch、TextInput、Badge、Tooltip 都来自 Astryx；自定义 Loopline dark theme 通过 `defineTheme()` 把 Astryx token 对齐到时间线的酸橙 / 深色调色板。
-- **Canvas 2D**：3D 结构、Flow Map、Sequence 三段监视器仍是命令式 Canvas 渲染，由 React 组件托管生命周期与指针交互。
+- **3Dmol.js 2.5（WebGL）**：真实 RFD4 design 的 3D Preview 使用内置 3Dmol viewer，cartoon + side-chain sticks、CDR 分色、旋转/缩放/自转。
+- **Canvas 2D**：Flow Map、Sequence，以及没有 persisted run 时的模拟 3D fallback 仍由命令式 Canvas 渲染，React 托管生命周期。
 - **纯 JS engine**：编译器、运行时、几何、序列与导出器保持与 UI 无关，便于测试和接真实 GPU。
 
 ## 持久化后端 · Tamarind RFD4
@@ -33,7 +34,7 @@ Loopline 是一个**表位驱动的 VHH（纳米抗体）设计平台 / 引擎�
 - **Tamarind Bio 单执行器**：`rfd4-proteina` / `nanobody-design`。
 - **API key 只在服务端**：从 `.env` 读取，不进入前端 bundle，也不通过 API 返回。
 - **RFD4 闭环**：`GET /api/tamarind/jobs` → `POST /api/tamarind/import-latest` → 下载 Tamarind 结果 ZIP → 解析 `results.csv` + 8 个 PDB → 写入 SQLite → 在 UI 的 **Runs** 抽屉中展示。
-- **真实结果进监视器**：Runs 里点 **Open persisted run** 会把最佳 design 的 backbone ribbon + **all-atom side-chain sticks** 载入主 Canvas（helix / β-sheet / loop；target / VHH / CDR 分色），也可以对单个 design 点 **View 3D**。二级结构由 PDB 的 N/CA/C/O 骨架二面角做 DSSP-lite 判定，不是 Cα 折线。
+- **真实结果进监视器**：Runs 里点 **Open persisted run** 会加载最佳 design，主 3D Preview 用 **3Dmol.js** 显示 cartoon + **all-atom side-chain sticks**（target / VHH / CDR 分色）；也可以对单个 design 点 **View 3D**。二级结构由 PDB 的 N/CA/C/O 骨架二面角做 DSSP-lite 判定。
 - **提交闭环**：`POST /api/tamarind/validate` 先校验；`POST /api/tamarind/submit` 提交真实 GPU job，后台每 15s 轮询 `/jobs`，完成后自动导入结果。
 
 ### 本地配置
@@ -84,7 +85,7 @@ ipTM 82.0 · pLDDT 90.82 · refold RMSD 1.68 Å · passed 0/8
 
 RFD4 提交设置（target chain A、hotspots 62,63、vobarilizumab、8 designs、thinking_high、60 steps、seed 20261112）已通过 Tamarind `/validate-job` 返回 `valid: true`。验证阶段没有实际提交新 GPU job；`/submit` 路径已接好，提交后会自动轮询并导入。
 
-点 **Open persisted run** 会把 `rfd4_design_008` 的真实 backbone ribbon + side-chain sticks（helix / β-sheet / loop）载入主监视器；在 Runs 详情里可以点单个 design 的 **View 3D** 切换。Stage 栏的 atom 按钮可以开关 side-chain sticks。
+点 **Open persisted run** 会加载 `rfd4_design_008`，主 3D Preview 由 3Dmol.js 显示 cartoon + side-chain sticks；Stage 栏的 atom 按钮开关 sticks，eye 开关链标签。
 
 
 
@@ -142,7 +143,7 @@ node tools/cdp.mjs render shots/02-render.png   # 需要本机 Chrome + 已启�
 | --- |
 | ![backend](shots/06-backend.png) |
 
-| 真实 RFD4 design · backbone ribbon + all-atom side-chain sticks |
+| 真实 RFD4 design · 3Dmol.js cartoon + all-atom side-chain sticks |
 | --- |
 | ![real design](shots/08-ribbon-sticks.png) |
 
@@ -225,7 +226,7 @@ vhh-studio/
 │  ├─ components/
 │  │  ├─ Topbar.tsx           # project, runtime, undo/redo, export, render
 │  │  ├─ Library.tsx          # Astryx search + model cards + templates
-│  │  ├─ Stage.tsx            # Astryx Tabs + legacy canvas mount
+│  │  ├─ Stage.tsx            # Astryx Tabs + legacy canvas + 3Dmol overlay
 │  │  ├─ Timeline.tsx         # React NLE: drag/trim/scrub/snap/drop
 │  │  ├─ Inspector.tsx        # Astryx fields, diagnostics, results
 │  │  ├─ LogsDrawer.tsx
@@ -238,7 +239,7 @@ vhh-studio/
 │  │  ├─ structure.js         # 程序化几何、序列设计、PDB/FASTA/CSV
 │  │  └─ rng.js               # 确定性 seed / timecode
 │  └─ ui/
-│     ├─ monitor.js           # imperative Canvas renderer (3D / Flow / Sequence)
+│     ├─ monitor.js           # imperative Canvas renderer (sim 3D / Flow / Sequence)
 │     └─ dom.js
 ├─ tests/engine.test.mjs
 ├─ tools/cdp.mjs              # headless Chrome 截图 / 交互 smoke test
@@ -254,14 +255,14 @@ main.tsx
        └─ <App>                                 ← one LooplineApp store
             ├─ <Topbar>        Astryx Button / IconButton
             ├─ <Library>       Astryx TextInput / Button
-            ├─ <Stage>         Astryx TabList + <MonitorCanvas>
+            ├─ <Stage>         Astryx TabList + <MonitorCanvas> + <ThreeDmolViewer>
             ├─ <Inspector>     Astryx TabList / TextInput / Slider / Switch / Badge
             ├─ <Timeline>      Astryx IconButton / Slider / Switch + custom clip layer
             ├─ <LogsDrawer>
             └─ <Toasts>
 ```
 
-`LooplineApp`（`src/state.js`）保留原有 store/命令 API；React 组件通过 `useAppEvents` 订阅其事件，不直接操作 DOM。唯一的 imperative 部分是 `src/ui/monitor.js` 的 Canvas 渲染循环，它由 `<Stage>` 在挂载时创建、卸载时 `destroy()`。
+`LooplineApp`（`src/state.js`）保留原有 store/命令 API；React 组件通过 `useAppEvents` 订阅其事件，不直接操作 DOM。`<Stage>` 同时托管 imperative 的 `monitor.js` Canvas（模拟 3D / Flow / Sequence）和 `<ThreeDmolViewer>`（真实 PDB WebGL）。
 
 ## 模型资源
 
@@ -309,13 +310,13 @@ interface Adapter {
 
 ## MVP 边界
 
-**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、2 套用户模板、确定性模拟引擎、16 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + backbone ribbon / all-atom side-chain sticks 监视器 + 默认加载最新 persisted run**。
+**已实现**：时间线编辑、自动编译、播放/渲染、3D/Flow/Sequence 监视器、参数检查器、结果排序、日志、撤销、本地持久化、JSON/FASTA/PDB/CSV 导出、2 套用户模板、确定性模拟引擎、16 个测试；**SQLite 持久化 + Tamarind RFD4 job 导入 / 校验 / 提交 / 轮询闭环 + 3Dmol.js cartoon / side-chain sticks + 默认加载最新 persisted run**。
 
-**未实现**：全原子 ribbon 精度（当前 ribbon 为骨架 cartoon 近似并存 side-chain sticks，不是 explicit-H 全原子模型）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
+**未实现**：explicit-H / 全原子力场模型（3Dmol 当前为 heavy-atom cartoon + side-chain sticks）、其他 Tamarind 模型、真实 PDB/mmCIF 输入解析、多链/配体、湿实验验证、协作、完整作业队列 UI。设计工作流中的结构和指标仍为模拟值。
 
 ## 路线图
 
-- **v0.3** 持久化后端 + Tamarind RFD4 单执行器 + ribbon / side-chain sticks 监视器（已落地）
+- **v0.3** 持久化后端 + Tamarind RFD4 单执行器 + 3Dmol.js cartoon / sticks 监视器（已落地）
 - **v0.4** explicit-H 全原子 ribbon、结果版本对比、Compound Clip
 - **v0.5** 并行轨道 / A-B 对照、更多 Tamarind 模型、作业取消
 - **v1.0** 3D 表面刷选表位、CDR 锁定、湿实验反馈闭环、团队资源库

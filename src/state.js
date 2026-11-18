@@ -64,6 +64,7 @@ export class App {
       labels: ui.labels !== false,
       sticks: ui.sticks !== false,
       realDesign: null,
+      molActive: false,
     };
     this.history = [];
     this.future = [];

@@ -404,7 +404,58 @@ body,
   margin-bottom: 1px;
 }
 
-/* --------------------------- Tamarind backend drawer --------------------------- */
+/* ---------------------------- 3Dmol viewer ---------------------------- */
+.mol-viewer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.mol-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.mol-canvas canvas {
+  display: block;
+}
+
+.monitor.has-real #monitorCanvas {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mol-status {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: rgba(7, 11, 16, .86);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.mol-status.error {
+  color: #e0a6a6;
+  border-color: rgba(255, 107, 107, .3);
+}
+
+.mol-status .mol-loader {
+  animation: spin 1.1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 .ll-root .ll-runs {
   height: 30px;
 }

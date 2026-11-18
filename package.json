@@ -16,6 +16,7 @@
     "@astryxdesign/core": "^0.7.16",
     "@astryxdesign/theme-neutral": "^0.7.16",
     "@stylexjs/stylex": "^0.19.2",
+    "3dmol": "^2.5.5",
     "fflate": "^0.8.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

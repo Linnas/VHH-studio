@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Monitor } from '../ui/monitor.js';
+import { ThreeDmolViewer } from './ThreeDmolViewer';
 import { useAppEvents } from '../lib/useAppEvents';
 import { Glyph } from '../lib/icons';
 
@@ -26,6 +27,8 @@ function StageMeta({ app }: { app: any }) {
 export function Stage({ app }: { app: any }) {
   useAppEvents(app, ['view', 'realDesign', 'sticks']);
   const monitorRef = useRef<any>(null);
+  const viewerRef = useRef<any>(null);
+  const [molFailed, setMolFailed] = useState(false);
   const view = app.state.view;
   const real = app.state.realDesign;
 
@@ -36,6 +39,10 @@ export function Stage({ app }: { app: any }) {
       monitorRef.current = null;
     };
   }, [app]);
+
+  useEffect(() => {
+    setMolFailed(false);
+  }, [real?.designId]);
 
   return (
     <section className="stage" id="monitor-panel" role="tabpanel" aria-label="Monitor preview">
@@ -97,16 +104,31 @@ export function Stage({ app }: { app: any }) {
             icon={<Glyph name="expand" size={13} />}
             variant="ghost"
             size="sm"
-            onClick={() => monitorRef.current?.resetCamera()}
+            onClick={() => {
+              if (viewerRef.current) {
+                viewerRef.current.zoomTo();
+                viewerRef.current.zoom(1.16);
+                viewerRef.current.render();
+              } else {
+                monitorRef.current?.resetCamera();
+              }
+            }}
             tooltip="Reset camera"
             className="ll-astryx-icon"
           />
         </div>
       </div>
 
-      <div className="monitor" id="monitorWrap" data-view={view}>
+      <div className={`monitor ${real && view === '3d' && !molFailed ? 'has-real' : ''}`} id="monitorWrap" data-view={view}>
         <canvas id="monitorCanvas" />
-        <div className="monitor-top">
+        {real && view === '3d' && !molFailed && (
+          <ThreeDmolViewer
+            app={app}
+            structure={real}
+            onReady={(viewer) => { viewerRef.current = viewer; }}
+            onError={() => setMolFailed(true)}
+          />
+        )}        <div className="monitor-top">
           <div className="monitor-title">
             <span className="live-dot" id="liveDot" />
             <div>

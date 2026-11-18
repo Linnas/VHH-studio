@@ -109,6 +109,7 @@ export function createApi({ store, tamarind, manager, version = '0.3.0' }) {
           designedSequence: design.sequence,
         });
         sendJson(res, 200, {
+          id: design.id,
           designId: design.designId,
           runId: design.runId,
           jobName: run?.jobName || null,
