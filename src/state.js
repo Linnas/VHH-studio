@@ -62,8 +62,8 @@ export class App {
       selectedCandidate: 0,
       spin: Boolean(ui.spin),
       labels: ui.labels !== false,
-      sticks: ui.sticks !== false,
-      stickMode: ui.stickMode === 'carbon' ? 'carbon' : (ui.sticks === false ? 'carbon' : 'stick'),
+      sticks: ui.stickMode === 'stick',
+      stickMode: ui.stickMode === 'stick' ? 'stick' : 'carbon',
       realDesign: null,
       molActive: false,
     };

@@ -1223,33 +1223,16 @@ export class Monitor {
     ctx.restore();
   }
   drawSidechainSticks(chains, project) {
-    const mode = this.app.state.stickMode || (this.app.state.sticks ? 'stick' : 'carbon');
+    const mode = this.app.state.stickMode || 'carbon';
+    if (mode !== 'stick') return;
     const ctx = this.ctx;
     const backboneNames = new Set(['N', 'CA', 'C', 'O']);
-    const binderCAs = [];
-    for (const chain of chains) {
-      if (chain.role !== 'binder') continue;
-      for (const res of chain.residues || []) {
-        const ca = res.atoms?.find((a) => a.name === 'CA');
-        if (ca) binderCAs.push(ca);
-      }
-    }
     const sticks = [];
     for (const chain of chains) {
       const isTarget = chain.role === 'target';
       for (const res of chain.residues || []) {
         const ca = res.atoms?.find((a) => a.name === 'CA');
         if (!ca) continue;
-        if (isTarget) {
-          let near = false;
-          for (const b of binderCAs) {
-            if ((ca.x - b.x) ** 2 + (ca.y - b.y) ** 2 + (ca.z - b.z) ** 2 < 81) {
-              near = true;
-              break;
-            }
-          }
-          if (!near) continue;
-        }
         const atomMap = new Map((res.atoms || []).map((a) => [a.name, a]));
         for (const [nameA, nameB] of res.bonds || []) {
           const a = atomMap.get(nameA);
@@ -1262,10 +1245,10 @@ export class Monitor {
             ? b.element
             : a.element === 'N' || a.element === 'O' || a.element === 'S' ? a.element : 'C';
           const color = element === 'N' ? '#6cb6ff' : element === 'O' ? '#ff7b72' : element === 'S' ? '#e5c07b'
-            : (isTarget ? '#9db1c4' : '#d7e2ee');
+            : (isTarget ? '#8fa8c4' : '#b7e36a');
           sticks.push({
             a: pa, b: pb, color,
-            alpha: (mode === 'stick' ? 0.44 : 0.3) + ((pa.depth + pb.depth) / 2) * (mode === 'stick' ? 0.56 : 0.5),
+            alpha: 0.44 + ((pa.depth + pb.depth) / 2) * 0.56,
             z: (pa.z + pb.z) / 2,
             atom: element,
           });
@@ -1277,7 +1260,7 @@ export class Monitor {
     ctx.lineCap = 'round';
     for (const stick of sticks) {
       ctx.strokeStyle = rgba(stick.color, stick.alpha);
-      ctx.lineWidth = mode === 'stick' ? 1.35 : 0.9;
+      ctx.lineWidth = 1.35;
       ctx.beginPath();
       ctx.moveTo(stick.a.x, stick.a.y);
       ctx.lineTo(stick.b.x, stick.b.y);
@@ -1368,6 +1351,7 @@ export class Monitor {
       return za - zb;
     });
     for (const run of cartoonRuns) {
+      if (this.app.state.stickMode !== 'carbon') continue;
       this.drawCartoonRun(run.points, run.ss, run.color, {
         alpha: 0.38 + run.depth * 0.62,
         emphasis: Boolean(run.region),
@@ -1437,7 +1421,7 @@ export class Monitor {
       `<span class="mon-pill"><span class="pdot" style="--c:#8fa2b8"></span>TARGET <b>${targetChains}</b></span>`,
       `<span class="mon-pill"><span class="pdot" style="--c:#b7e36a"></span>VHH <b>${binderChain}</b></span>`,
       real.ssSummary ? `<span class="mon-pill">H/S/L <b>${real.ssSummary.helix}/${real.ssSummary.sheet}/${real.ssSummary.loop}</b></span>` : '',
-      `<span class="mon-pill">SIDECHAIN <b>${this.app.state.stickMode === 'carbon' ? 'CARBON' : 'STICK'}</b></span>`,
+      `<span class="mon-pill">REPRESENTATION <b>${this.app.state.stickMode === 'stick' ? 'STICK' : 'CARBON'}</b></span>`,
       Number.isFinite(ipTM) ? `<span class="mon-pill">ipTM <b>${ipTM.toFixed(0)}</b></span>` : '',
       Number.isFinite(plddt) ? `<span class="mon-pill">pLDDT <b>${plddt.toFixed(1)}</b></span>` : '',
       Number.isFinite(rmsd) ? `<span class="mon-pill">RMSD <b>${rmsd.toFixed(2)} Å</b></span>` : '',
@@ -1446,20 +1430,26 @@ export class Monitor {
     if (!force && key === this._hudKey) return;
     this._hudKey = key;
     this.kickerEl.textContent = 'RFD4 · 3DMOL';
-    this.stageEl.textContent = `${real.designId} · cartoon + ${this.app.state.stickMode === 'carbon' ? 'carbon' : 'stick'}`;
+    this.stageEl.textContent = this.app.state.stickMode === 'stick'
+      ? `${real.designId} · stick representation`
+      : `${real.designId} · carbon cartoon`;
     this.pillsEl.innerHTML = pills.join('');
     this.tcEl.textContent = formatTimecode(this.app.state.playhead, this.app.project.fps);
     this.liveDot.classList.remove('on', 'live');
     this.emptyEl.classList.add('hidden');
-    this.legendEl.innerHTML = `
-      <span class="leg" style="--c:#7fa8c4"><i></i>Target</span>
-      <span class="leg" style="--c:#b7e36a"><i></i>VHH</span>
-      <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
-      <span class="leg" style="--c:#ffb454"><i></i>CDR2</span>
-      <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>
-      <span class="leg" style="--c:#6cb6ff"><i></i>N</span>
-      <span class="leg" style="--c:#ff7b72"><i></i>O</span>
-      <span class="leg" style="--c:#e5c07b"><i></i>S</span>`;
+    this.legendEl.innerHTML = this.app.state.stickMode === 'stick'
+      ? `
+        <span class="leg" style="--c:#8fa8c4"><i></i>Target sticks</span>
+        <span class="leg" style="--c:#b7e36a"><i></i>VHH sticks</span>
+        <span class="leg" style="--c:#6cb6ff"><i></i>N</span>
+        <span class="leg" style="--c:#ff7b72"><i></i>O</span>
+        <span class="leg" style="--c:#e5c07b"><i></i>S</span>`
+      : `
+        <span class="leg" style="--c:#7fa8c4"><i></i>Target cartoon</span>
+        <span class="leg" style="--c:#b7e36a"><i></i>VHH cartoon</span>
+        <span class="leg" style="--c:#5ee7ff"><i></i>CDR1</span>
+        <span class="leg" style="--c:#ffb454"><i></i>CDR2</span>
+        <span class="leg" style="--c:#ff6fae"><i></i>CDR3</span>`;
   }
 
   /* ================================= HUD ================================== */

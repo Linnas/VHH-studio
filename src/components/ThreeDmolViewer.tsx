@@ -34,34 +34,32 @@ function applyLabels(viewer: any, structure: any, show: boolean) {
 function applyStyle(viewer: any, structure: any, mode: 'carbon' | 'stick') {
   viewer.setStyle({}, {});
   const chains = structure.chains || [];
-  const binder = chains.find((c: any) => c.role === 'binder');
-  const sideStyle = mode === 'stick'
-    ? { stick: { radius: 0.13, colorscheme: 'Jmol' } }
-    : { line: { linewidth: 1.6, colorscheme: 'Jmol' } };
 
-  for (const chain of chains) {
-    const base = chain.role === 'target' ? '#7fa8c4' : '#b7e36a';
-    viewer.setStyle({ chain: chain.id }, {
-      cartoon: { color: base, style: 'rectangle', thickness: 0.32 },
-    });
-
-    for (const cdr of chain.cdrs || []) {
-      const start = chain.residues?.[cdr.start]?.resSeq;
-      const end = chain.residues?.[cdr.end]?.resSeq;
-      if (start == null || end == null) continue;
-      viewer.addStyle({ chain: chain.id, resi: `${start}-${end}` }, {
-        cartoon: { color: CDR_COLORS[cdr.key] || '#ffb454', style: 'rectangle', thickness: 0.32 },
+  if (mode === 'carbon') {
+    // Carbon: cartoon only. No side-chain sticks at all.
+    for (const chain of chains) {
+      const base = chain.role === 'target' ? '#7fa8c4' : '#b7e36a';
+      viewer.setStyle({ chain: chain.id }, {
+        cartoon: { color: base, style: 'rectangle', thickness: 0.32 },
       });
+      for (const cdr of chain.cdrs || []) {
+        const start = chain.residues?.[cdr.start]?.resSeq;
+        const end = chain.residues?.[cdr.end]?.resSeq;
+        if (start == null || end == null) continue;
+        viewer.addStyle({ chain: chain.id, resi: `${start}-${end}` }, {
+          cartoon: { color: CDR_COLORS[cdr.key] || '#ffb454', style: 'rectangle', thickness: 0.32 },
+        });
+      }
     }
+    return;
+  }
 
-    if (chain.role === 'target' && binder) {
-      viewer.addStyle({
-        chain: chain.id,
-        within: { distance: 8, sel: { chain: binder.id } },
-      }, sideStyle);
-    } else {
-      viewer.addStyle({ chain: chain.id }, sideStyle);
-    }
+  // Stick: sticks only. No cartoon / carbon trace underneath.
+  for (const chain of chains) {
+    const scheme = chain.role === 'target' ? 'blueCarbon' : 'greenCarbon';
+    viewer.addStyle({ chain: chain.id }, {
+      stick: { radius: 0.14, colorscheme: scheme },
+    });
   }
 }
 

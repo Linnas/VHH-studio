@@ -97,7 +97,7 @@ export function Stage({ app }: { app: any }) {
             icon={<Glyph name="atom" size={13} />}
             isDisabled={!real || view !== '3d'}
             onClick={() => app.toggleSticks()}
-            tooltip={`Side-chain representation: ${app.state.stickMode}. Click to switch to ${app.state.stickMode === 'stick' ? 'carbon' : 'stick'}.`}
+            tooltip={`Representation: ${app.state.stickMode === 'stick' ? 'stick' : 'carbon cartoon'}. Click to switch to ${app.state.stickMode === 'stick' ? 'carbon' : 'stick'}.`}
             className="ll-astryx-button ll-stick-toggle"
           />
           <IconButton
